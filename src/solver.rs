@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-
 use crate::instance::Instance;
+use crate::seq::SeqTools;
 use crate::seq::Sequence;
-use crate::server_config::ServerConfiguration;
 use mcmf::*;
+use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Copy, Clone, Ord, PartialOrd, PartialEq, Eq)]
 enum VertexType {
@@ -14,7 +14,7 @@ enum VertexType {
 
 const COST_CONST: i32 = -100000;
 
-pub fn solve(instance: &Instance) -> Result<(Sequence, u32), String> {
+pub fn solve(instance: &Instance) -> Result<(Sequence, u32), Box<dyn Error>> {
     let mut graph = GraphBuilder::new();
     add_source_and_init_vertices(&mut graph, instance);
     add_request_verticies(&mut graph, instance);
@@ -89,9 +89,7 @@ fn is_move_edge(v1: &Vertex<VertexType>, v2: &Vertex<VertexType>) -> Option<usiz
 }
 
 fn create_sequence(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> Sequence {
-    let mut seq = Sequence::new(ServerConfiguration::new(
-        instance.initial_positions().to_vec(),
-    ));
+    let mut seq = Sequence::new_seq(instance.initial_positions().to_vec());
     let tuples: Vec<(usize, usize)> = paths
         .iter()
         .enumerate()
@@ -105,7 +103,7 @@ fn create_sequence(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> S
     let mut fixed_tuples = order_servers_correctly(tuples, instance);
     fixed_tuples.sort_by_key(|&(_, r)| r);
     for (s, r) in fixed_tuples.iter() {
-        seq.append_move(*s as u32, instance.req(r));
+        seq.append_move(*s, instance.req(r));
     }
     seq
 }
@@ -140,12 +138,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn solver_costs_1_works() -> Result<(), String> {
+    fn solver_costs_1_works() -> Result<(), Box<dyn Error>> {
         let instance = Instance::new(vec![78, 77, 30, 8, 15, 58, 37, 19, 11, 7], vec![91, 91]);
         let solution = solve(&instance);
         let (seq, costs) = solution?;
         assert_eq!(160, costs);
         assert_eq!(160, seq.costs());
         Ok(())
+    }
+
+    #[test]
+    fn solver_order_works() {
+        let instance = Instance::new(vec![40, 60, 50], vec![50, 50]);
+        let tuples = vec![(1, 0), (0, 1), (1, 2)];
+        assert_eq!(
+            vec![(0, 0), (1, 1), (0, 2)],
+            order_servers_correctly(tuples, &instance)
+        );
     }
 }

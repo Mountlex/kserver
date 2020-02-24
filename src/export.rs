@@ -1,3 +1,4 @@
+use crate::seq::CostMetric;
 use crate::sim::SimResult;
 use console::style;
 use csv::Writer;
@@ -20,6 +21,7 @@ struct Record {
     numberOfRequests: u64,
     lmbda: f32,
     eta: u64,
+    optCost: u64,
     algCost: u64,
     dcCost: u64,
 }
@@ -32,6 +34,7 @@ impl Record {
             numberOfRequests: res.instance.length() as u64,
             lmbda: res.lambda,
             eta: res.eta as u64,
+            optCost: res.solution.costs() as u64,
             algCost: res.alg_cost as u64,
             dcCost: res.dc_cost as u64,
         }

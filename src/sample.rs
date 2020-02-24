@@ -11,7 +11,6 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 pub struct SampleCmd {
-    #[structopt(short = "s", long = "samples")]
     pub number_of_samples: usize,
 
     #[structopt(short = "k", long = "servers", default_value = "2")]
@@ -62,7 +61,7 @@ pub fn run(config: &Config) -> Result<Vec<Sample>, Box<dyn Error>> {
     if number_of_rejected_samples > 0 {
         println!(
             "{} samples have been rejected because no valid predictions have been found!",
-            number_of_rejected_samples
+            style(number_of_rejected_samples).bold().red()
         );
     }
     println!("{}", style("Sampling finished!").bold().green());
@@ -90,10 +89,7 @@ fn generate_all_predictions(
                     predictions: preds,
                     ..sample
                 }),
-                Err(e) => {
-                    println!("{}", e);
-                    Err(e)
-                }
+                Err(e) => Err(e),
             }
         })
         .filter_map(Result::ok)

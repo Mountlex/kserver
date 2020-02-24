@@ -20,37 +20,15 @@ pub struct SampleCmd {
     #[structopt(short = "l", long = "length", default_value = "50")]
     pub number_of_requests: usize,
 
-    #[structopt(short = "p", long = "preds", default_value = "12")]
-    pub number_of_predictions: usize,
-
     #[structopt(long = "min", default_value = "0")]
     pub min_value: i32,
-
     #[structopt(long = "max", default_value = "200")]
     pub max_value: i32,
-
-    #[structopt(short = "b", long = "preds_bin_size", default_value = "0.25")]
-    pub step_size: f32,
-
-    #[structopt(long = "preds_samples_per_round", default_value = "100")]
-    pub number_of_samples_per_round: usize,
-
-    #[structopt(long = "max_preds_per_bin", default_value = "5")]
-    pub max_preds_per_round: usize,
+    #[structopt(flatten)]
+    pub pred_config: PredictionConfig,
 }
 
 pub type Config = SampleCmd;
-
-impl Config {
-    fn toPredictionConfig(&self) -> PredictionConfig {
-        PredictionConfig {
-            step_size: self.step_size,
-            number_of_preds: self.number_of_predictions,
-            number_of_samples_per_round: self.number_of_samples_per_round,
-            max_preds_per_round: self.max_preds_per_round,
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct Sample {
@@ -70,7 +48,7 @@ impl Sample {
 }
 
 pub fn run(config: &Config) -> Result<Vec<Sample>, Box<dyn Error>> {
-    println!("Starting sampling...");
+    println!("{}", style("Start sampling...").bold().cyan());
     println!("{} Generating instances...", style("[1/4]").bold().dim());
     let instances = generate_instances(config)?;
     println!("{} Solving instances...", style("[2/4]").bold().dim());
@@ -87,8 +65,9 @@ pub fn run(config: &Config) -> Result<Vec<Sample>, Box<dyn Error>> {
             number_of_rejected_samples
         );
     }
-    println!("Sampling finished!");
-    Ok((samples_with_preds))
+    println!("{}", style("Sampling finished!").bold().green());
+
+    Ok(samples_with_preds)
 }
 
 fn generate_all_predictions(
@@ -102,13 +81,11 @@ fn generate_all_predictions(
             .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] ({pos}/{len})"),
     );
 
-    let pred_config = config.toPredictionConfig();
-
     let samples_with_preds = samples
         .into_par_iter()
         .progress_with(pb)
         .map(|sample| {
-            match generate_predictions(&sample.instance, &sample.solution, &pred_config) {
+            match generate_predictions(&sample.instance, &sample.solution, &config.pred_config) {
                 Ok(preds) => Ok(Sample {
                     predictions: preds,
                     ..sample

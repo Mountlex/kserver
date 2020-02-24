@@ -3,14 +3,22 @@ use crate::seq::{CostMetric, Sequence, SequenceCreation};
 use crate::server_config::ServerConfig;
 use rand::distributions::{Distribution, Uniform};
 use rand::seq::SliceRandom;
-use std::cmp::{max, min};
 use std::error::Error;
 use std::fmt;
+use structopt::StructOpt;
 
+#[derive(StructOpt, Debug)]
 pub struct PredictionConfig {
-    pub number_of_preds: usize,
+    #[structopt(short = "p", long = "preds", default_value = "12")]
+    pub number_of_predictions: usize,
+
+    #[structopt(short = "b", long = "preds_bin_size", default_value = "0.25")]
     pub step_size: f32,
+
+    #[structopt(long = "preds_samples_per_round", default_value = "100")]
     pub number_of_samples_per_round: usize,
+
+    #[structopt(long = "max_preds_per_bin", default_value = "5")]
     pub max_preds_per_round: usize,
 }
 
@@ -50,7 +58,8 @@ pub fn generate_predictions(
     solution: &Sequence,
     config: &PredictionConfig,
 ) -> Result<Vec<Sequence>, PredictionError> {
-    let mut step_to_predictions: Vec<Vec<Sequence>> = vec![vec![]; config.number_of_preds as usize];
+    let mut step_to_predictions: Vec<Vec<Sequence>> =
+        vec![vec![]; config.number_of_predictions as usize];
 
     step_to_predictions[0].push(solution.to_vec());
 
@@ -92,7 +101,7 @@ pub fn generate_predictions(
             let ratio = eta as f32 / solution.costs() as f32;
             let bin_index: usize = (ratio / config.step_size).ceil() as usize;
 
-            if bin_index < config.number_of_preds
+            if bin_index < config.number_of_predictions
                 && step_to_predictions[bin_index].len() < config.max_preds_per_round
             {
                 step_to_predictions[bin_index].push(pred);

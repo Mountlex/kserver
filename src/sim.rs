@@ -4,8 +4,7 @@ use crate::sample::Sample;
 use crate::seq::CostMetric;
 use crate::seq::Sequence;
 use console::style;
-use indicatif::{ParallelProgressIterator, ProgressBar, ProgressIterator, ProgressStyle};
-use rayon::prelude::*;
+use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use std::error::Error;
 use structopt::StructOpt;
 
@@ -21,20 +20,20 @@ pub struct SimResult {
     pub instance: Instance,
     pub solution: Sequence,
     pub eta: u32,
-    pub dcCost: u32,
-    pub algCost: u32,
+    pub dc_cost: u32,
+    pub alg_cost: u32,
     pub lambda: f32,
 }
 
 pub fn run(samples: Vec<Sample>, config: &SimConfig) -> Result<Vec<SimResult>, Box<dyn Error>> {
-    println!("Starting simulation...");
+    println!("{}", style("Start simulating...").bold().cyan());
     let results = simulate_samples(
         samples,
         linspace::<f32>(0., 1., config.number_of_lambdas)
             .into_iter()
             .collect::<Vec<f32>>(),
     )?;
-    println!("Simulation finished!");
+    println!("{}", style("Simulation finished!").bold().green());
 
     Ok(results)
 }
@@ -57,18 +56,18 @@ fn simulate_samples(
             lambdas
                 .iter()
                 .flat_map(|lambda| {
-                    let dcCost = double_coverage(&sample.instance).costs();
+                    let dc_cost = double_coverage(&sample.instance).costs();
                     sample
                         .predictions
                         .iter()
                         .map(|pred| {
-                            let algCost = lambda_dc(&sample.instance, pred, *lambda).costs();
+                            let alg_cost = lambda_dc(&sample.instance, pred, *lambda).costs();
                             SimResult {
                                 instance: sample.instance.clone(),
                                 solution: sample.solution.to_vec(),
                                 eta: pred.diff(&sample.solution),
-                                dcCost,
-                                algCost,
+                                dc_cost: dc_cost,
+                                alg_cost: alg_cost,
                                 lambda: *lambda,
                             }
                         })

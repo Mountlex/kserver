@@ -1,4 +1,5 @@
 use crate::sim::SimResult;
+use console::style;
 use csv::Writer;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use serde::Serialize;
@@ -11,6 +12,7 @@ pub struct ExportConfig {
     pub output_file: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 struct Record {
@@ -23,20 +25,26 @@ struct Record {
 }
 
 impl Record {
+    #[allow(unused_variables)]
     fn from_result(res: SimResult, config: &ExportConfig) -> Record {
         Record {
             numberOfServers: res.instance.k() as u64,
             numberOfRequests: res.instance.length() as u64,
             lmbda: res.lambda,
             eta: res.eta as u64,
-            algCost: res.algCost as u64,
-            dcCost: res.dcCost as u64,
+            algCost: res.alg_cost as u64,
+            dcCost: res.dc_cost as u64,
         }
     }
 }
 
 pub fn run(results: Vec<SimResult>, config: &ExportConfig) -> Result<(), Box<dyn Error>> {
-    println!("Start exporting to {} ...", config.output_file);
+    println!(
+        "{}",
+        style(format!("Start exporting to {}...", config.output_file))
+            .bold()
+            .cyan()
+    );
     let mut wtr = Writer::from_path(config.output_file.clone())?;
     let pb = ProgressBar::new(results.len() as u64);
     pb.set_style(
@@ -48,7 +56,7 @@ pub fn run(results: Vec<SimResult>, config: &ExportConfig) -> Result<(), Box<dyn
         wtr.serialize(record)?;
     }
     wtr.flush()?;
-    println!("Exporting finished!");
+    println!("{}", style("Exporting finished!").bold().green());
 
     Ok(())
 }

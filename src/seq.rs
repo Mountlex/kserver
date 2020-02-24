@@ -16,7 +16,7 @@ impl Prediction for Sequence {
             self[idx + 1]
                 .iter()
                 .enumerate()
-                .find(|(i, &server)| server == req)
+                .find(|(_, &server)| server == req)
                 .map(|(i, _)| i)
                 .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!"))
         })

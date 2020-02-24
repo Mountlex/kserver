@@ -37,6 +37,7 @@ impl Error for SolverError {
     }
 }
 
+#[allow(dead_code)]
 impl SolverError {
     fn new(msg: String) -> SolverError {
         SolverError { msg: msg }

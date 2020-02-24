@@ -11,10 +11,10 @@ struct KServer {
     debug: bool,
 
     #[structopt(flatten)]
-    simConfig: sim::SimConfig,
+    sim_config: sim::SimConfig,
 
     #[structopt(flatten)]
-    exportConfig: export::ExportConfig,
+    export_config: export::ExportConfig,
 
     #[structopt(subcommand)]
     cmd: Command,
@@ -35,8 +35,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let samples = match cli.cmd {
         Command::Sample(config) => sample::run(&config)?,
     };
-    let results = sim::run(samples, &cli.simConfig)?;
-    export::run(results, &cli.exportConfig)?;
+    let results = sim::run(samples, &cli.sim_config)?;
+    export::run(results, &cli.export_config)?;
 
     Ok(())
 }

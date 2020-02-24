@@ -1,6 +1,6 @@
 pub type ServerConfiguration = Vec<i32>;
 
-pub trait ServerMove {
+pub trait ServerConfig {
     fn from_move(&self, id: usize, pos: i32) -> Self;
 
     fn moved_server(&self, other: &Self) -> Option<usize>;
@@ -32,7 +32,7 @@ pub fn config_diff(config1: &ServerConfiguration, config2: &ServerConfiguration)
         .sum::<i32>() as u32;
 }
 
-impl ServerMove for ServerConfiguration {
+impl ServerConfig for ServerConfiguration {
     fn from_move(&self, id: usize, pos: i32) -> ServerConfiguration {
         let mut new_pos = self.clone();
         new_pos[id] = pos;

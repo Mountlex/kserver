@@ -1,6 +1,6 @@
 use crate::instance::Instance;
-use crate::seq::{sequence_diff, SeqTools, Sequence};
-use crate::server_config::ServerMove;
+use crate::seq::{CostMetric, Sequence, SequenceCreation};
+use crate::server_config::ServerConfig;
 use rand::distributions::{Distribution, Uniform};
 use rand::seq::SliceRandom;
 use std::cmp::{max, min};
@@ -88,7 +88,7 @@ pub fn generate_predictions(
                 }
             }
 
-            let eta = sequence_diff(solution, &pred);
+            let eta = solution.diff(&pred);
             let ratio = eta as f32 / solution.costs() as f32;
             let bin_index: usize = (ratio / config.step_size).ceil() as usize;
 

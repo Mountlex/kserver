@@ -1,46 +1,69 @@
 use crate::server_config::config_diff;
 use crate::server_config::is_normalized;
+use crate::server_config::ServerConfig;
 use crate::server_config::ServerConfiguration;
-use crate::server_config::ServerMove;
 use std::error::Error;
 
 pub type Sequence = Vec<ServerConfiguration>;
 
 pub trait Prediction {
-    fn predicted_server(&self, idx: usize) -> Option<usize>;
+    fn predicted_server(&self, idx: usize, req: i32) -> usize;
 }
 
 impl Prediction for Sequence {
-    fn predicted_server(&self, idx: usize) -> Option<usize> {
-        return self[idx].moved_server(&self[idx + 1]);
+    fn predicted_server(&self, idx: usize, req: i32) -> usize {
+        self[idx].moved_server(&self[idx + 1]).unwrap_or_else(|| {
+            self[idx + 1]
+                .iter()
+                .enumerate()
+                .find(|(i, &server)| server == req)
+                .map(|(i, _)| i)
+                .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!"))
+        })
     }
 }
 
-pub trait SeqTools {
-    fn new_seq(initial_configuration: ServerConfiguration) -> Self;
-
-    fn append_config(&mut self, config: ServerConfiguration);
-
+pub trait CostMetric {
     fn costs(&self) -> u32;
-
-    fn append_move(&mut self, id: usize, position: i32);
+    fn diff(&self, other: &Self) -> u32;
 }
 
-impl SeqTools for Sequence {
-    fn new_seq(initial_configuration: ServerConfiguration) -> Sequence {
-        vec![initial_configuration]
-    }
-
-    fn append_config(&mut self, config: ServerConfiguration) {
-        self.push(config);
-    }
-
+impl CostMetric for Sequence {
     fn costs(&self) -> u32 {
         return self
             .iter()
             .zip(self.iter().skip(1))
             .map(|(c1, c2)| config_diff(c1, c2))
             .sum();
+    }
+
+    fn diff(&self, other: &Self) -> u32 {
+        if self.len() != other.len() {
+            panic!("Sequences must have same size!")
+        }
+        return self
+            .iter()
+            .zip(other.iter())
+            .map(|(c1, c2)| config_diff(c1, c2))
+            .sum();
+    }
+}
+
+pub trait SequenceCreation {
+    fn new_seq(initial_configuration: ServerConfiguration) -> Self;
+
+    fn append_config(&mut self, config: ServerConfiguration);
+
+    fn append_move(&mut self, id: usize, position: i32);
+}
+
+impl SequenceCreation for Sequence {
+    fn new_seq(initial_configuration: ServerConfiguration) -> Sequence {
+        vec![initial_configuration]
+    }
+
+    fn append_config(&mut self, config: ServerConfiguration) {
+        self.push(config);
     }
 
     fn append_move(&mut self, id: usize, position: i32) {
@@ -52,17 +75,6 @@ impl SeqTools for Sequence {
             }
         }
     }
-}
-
-pub fn sequence_diff(seq1: &Sequence, seq2: &Sequence) -> u32 {
-    if seq1.len() != seq2.len() {
-        panic!("Sequences must have same size!")
-    }
-    return seq1
-        .iter()
-        .zip(seq2.iter())
-        .map(|(c1, c2)| config_diff(c1, c2))
-        .sum();
 }
 
 pub fn normalize_sequence(seq: Sequence) -> Result<Sequence, Box<dyn Error>> {
@@ -131,7 +143,7 @@ mod tests {
         seq1.append_config(conf12);
         let mut seq2 = Sequence::new_seq(conf21);
         seq2.append_config(conf22);
-        assert_eq!(14, sequence_diff(&seq1, &seq2));
+        assert_eq!(14, seq1.diff(&seq2));
     }
     #[test]
     #[should_panic]
@@ -139,7 +151,7 @@ mod tests {
         let mut seq1 = Sequence::new_seq(vec![10]);
         seq1.append_config(vec![10]);
         let seq2 = Sequence::new_seq(vec![10]);
-        sequence_diff(&seq1, &seq2);
+        seq1.diff(&seq2);
     }
     #[test]
     fn append_move_works() {

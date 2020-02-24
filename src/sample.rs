@@ -52,7 +52,8 @@ impl Config {
     }
 }
 
-struct Sample {
+#[derive(Clone)]
+pub struct Sample {
     pub instance: Instance,
     pub solution: Sequence,
     pub predictions: Vec<Sequence>,
@@ -68,7 +69,7 @@ impl Sample {
     }
 }
 
-pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
+pub fn run(config: &Config) -> Result<Vec<Sample>, Box<dyn Error>> {
     println!("Starting sampling...");
     println!("{} Generating instances...", style("[1/4]").bold().dim());
     let instances = generate_instances(config)?;
@@ -86,7 +87,8 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
             number_of_rejected_samples
         );
     }
-    Ok(())
+    println!("Sampling finished!");
+    Ok((samples_with_preds))
 }
 
 fn generate_all_predictions(

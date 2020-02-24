@@ -1,4 +1,6 @@
+use crate::export;
 use crate::sample;
+use crate::sim;
 use std::error::Error;
 use structopt::StructOpt;
 
@@ -7,6 +9,12 @@ use structopt::StructOpt;
 struct KServer {
     #[structopt(short, long)]
     debug: bool,
+
+    #[structopt(flatten)]
+    simConfig: sim::SimConfig,
+
+    #[structopt(flatten)]
+    exportConfig: export::ExportConfig,
 
     #[structopt(subcommand)]
     cmd: Command,
@@ -24,7 +32,11 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     println!("{:?}", cli);
 
-    match cli.cmd {
-        Command::Sample(config) => sample::run(&config),
-    }
+    let samples = match cli.cmd {
+        Command::Sample(config) => sample::run(&config)?,
+    };
+    let results = sim::run(samples, &cli.simConfig)?;
+    export::run(results, &cli.exportConfig)?;
+
+    Ok(())
 }

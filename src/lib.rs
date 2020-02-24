@@ -1,11 +1,13 @@
 pub mod algorithm;
 pub mod cli;
+pub mod export;
 pub mod instance;
 pub mod instance_sample;
 pub mod pred;
 pub mod sample;
 pub mod seq;
 pub mod server_config;
+pub mod sim;
 pub mod solver;
 
 pub struct Config {}

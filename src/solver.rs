@@ -1,6 +1,5 @@
 use crate::instance::Instance;
-use crate::seq::SeqTools;
-use crate::seq::Sequence;
+use crate::seq::{Sequence, SequenceCreation};
 use mcmf::*;
 use std::collections::HashMap;
 use std::error::Error;
@@ -168,6 +167,7 @@ fn order_servers_correctly(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::seq::CostMetric;
 
     #[test]
     fn solver_costs_1_works() -> Result<(), Box<dyn Error>> {

@@ -1,5 +1,5 @@
 use crate::instance::Instance;
-use crate::seq::{Prediction, SeqTools, Sequence};
+use crate::seq::{Prediction, Sequence, SequenceCreation};
 use crate::server_config::*;
 use std::cmp::min;
 
@@ -8,8 +8,8 @@ pub fn double_coverage(instance: &Instance) -> Sequence {
     return dc.run(instance);
 }
 
-pub fn lambda_dc(instance: &Instance, prediction: Sequence, lambda: f32) -> Sequence {
-    let alg = LambdaDC::new(prediction, lambda);
+pub fn lambda_dc(instance: &Instance, prediction: &Sequence, lambda: f32) -> Sequence {
+    let alg = LambdaDC::new(prediction.to_vec(), lambda);
     return alg.run(instance);
 }
 
@@ -93,23 +93,23 @@ impl Algorithm for LambdaDC {
         let mut res = current.to_vec();
         match (left, right) {
             (Some(i), Some(j)) => {
-                let predicted = self.prediction.predicted_server(req_idx).unwrap();
-                if self.lambda == 0.0 {
-                    res[predicted] = req;
+                if i == j {
+                    res[i] = req;
                 } else {
-                    let other: usize = *[i, j].iter().find(|&x| *x != predicted).unwrap();
-                    let distances = self.get_distances(current[predicted], current[other], req);
-                    println!(
-                        "distances {:?} current {:?} req {} pred {}",
-                        distances, current, req, predicted
-                    );
-                    if i == predicted {
-                        // left server
-                        res[i] += distances.0.floor() as i32;
-                        res[j] -= distances.1.floor() as i32;
+                    let predicted = self.prediction.predicted_server(req_idx, req);
+                    if self.lambda == 0.0 {
+                        res[predicted] = req;
                     } else {
-                        res[i] += distances.1.floor() as i32;
-                        res[j] -= distances.0.floor() as i32;
+                        let other: usize = *[i, j].iter().find(|&x| *x != predicted).unwrap();
+                        let distances = self.get_distances(current[predicted], current[other], req);
+                        if i == predicted {
+                            // left server
+                            res[i] += distances.0.floor() as i32;
+                            res[j] -= distances.1.floor() as i32;
+                        } else {
+                            res[i] += distances.1.floor() as i32;
+                            res[j] -= distances.0.floor() as i32;
+                        }
                     }
                 }
             }

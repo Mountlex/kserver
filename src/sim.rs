@@ -6,6 +6,7 @@ use crate::seq::Sequence;
 use console::style;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use std::error::Error;
+use std::fmt;
 use structopt::StructOpt;
 
 use itertools_num::linspace;
@@ -14,6 +15,25 @@ use itertools_num::linspace;
 pub struct SimConfig {
     #[structopt(long = "num_lambdas", default_value = "5")]
     pub number_of_lambdas: usize,
+}
+
+#[derive(Debug)]
+pub struct SimulatorError;
+
+impl fmt::Display for SimulatorError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Invalid sample")
+    }
+}
+
+impl Error for SimulatorError {
+    fn description(&self) -> &str {
+        "Invalid sample!"
+    }
+
+    fn cause(&self) -> Option<&dyn Error> {
+        None
+    }
 }
 
 pub struct SimResult {
@@ -38,6 +58,41 @@ pub fn run(samples: Vec<Sample>, config: &SimConfig) -> Result<Vec<SimResult>, B
     Ok(results)
 }
 
+fn simulate_sample(sample: Sample, lambdas: &Vec<f32>) -> Result<Vec<SimResult>, SimulatorError> {
+    let results = lambdas
+        .iter()
+        .flat_map(|lambda| {
+            let dc_cost = double_coverage(&sample.instance).costs();
+            sample
+                .predictions
+                .iter()
+                .map(|pred| {
+                    let alg = lambda_dc(&sample.instance, pred, *lambda);
+                    let alg_cost = alg.costs();
+                    let eta = pred.diff(&sample.solution);
+                    SimResult {
+                        instance: sample.instance.clone(),
+                        solution: sample.solution.to_vec(),
+                        eta,
+                        dc_cost: dc_cost,
+                        alg_cost: alg_cost,
+                        lambda: *lambda,
+                    }
+                })
+                .collect::<Vec<SimResult>>()
+        })
+        .collect::<Vec<SimResult>>();
+
+    if results
+        .iter()
+        .any(|res| res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.solution.costs())
+    {
+        return Err(SimulatorError);
+    }
+
+    return Ok(results);
+}
+
 fn simulate_samples(
     samples: Vec<Sample>,
     lambdas: Vec<f32>,
@@ -52,29 +107,8 @@ fn simulate_samples(
     let results: Vec<Vec<SimResult>> = samples
         .into_iter()
         .progress_with(pb)
-        .map(|sample| {
-            lambdas
-                .iter()
-                .flat_map(|lambda| {
-                    let dc_cost = double_coverage(&sample.instance).costs();
-                    sample
-                        .predictions
-                        .iter()
-                        .map(|pred| {
-                            let alg_cost = lambda_dc(&sample.instance, pred, *lambda).costs();
-                            SimResult {
-                                instance: sample.instance.clone(),
-                                solution: sample.solution.to_vec(),
-                                eta: pred.diff(&sample.solution),
-                                dc_cost: dc_cost,
-                                alg_cost: alg_cost,
-                                lambda: *lambda,
-                            }
-                        })
-                        .collect::<Vec<SimResult>>()
-                })
-                .collect::<Vec<SimResult>>()
-        })
+        .map(|sample| simulate_sample(sample, &lambdas))
+        .filter_map(Result::ok)
         .collect::<Vec<Vec<SimResult>>>();
 
     let res = results.into_iter().flatten().collect::<Vec<SimResult>>();

@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Instance {
     requests: Vec<i32>,
     initial_positions: Vec<i32>,

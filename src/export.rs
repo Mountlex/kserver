@@ -29,7 +29,7 @@ struct Record {
 impl Record {
     #[allow(unused_variables)]
     fn from_result(res: SimResult, config: &ExportConfig) -> Record {
-        Record {
+        let rec = Record {
             numberOfServers: res.instance.k() as u64,
             numberOfRequests: res.instance.length() as u64,
             lmbda: res.lambda,
@@ -37,7 +37,11 @@ impl Record {
             optCost: res.solution.costs() as u64,
             algCost: res.alg_cost as u64,
             dcCost: res.dc_cost as u64,
+        };
+        if rec.eta == 0 && rec.lmbda == 0.0 && rec.optCost != rec.algCost {
+            panic!("This should not happen!")
         }
+        return rec;
     }
 }
 

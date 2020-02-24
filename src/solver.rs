@@ -189,4 +189,20 @@ mod tests {
             order_servers_correctly(tuples, &instance)
         );
     }
+
+    #[test]
+    fn solver_works() -> Result<(), Box<dyn Error>> {
+        let instance = Instance::new(vec![38, 72, 183, 149, 135, 104], vec![32, 32]);
+        let solution = vec![
+            vec![32, 32],
+            vec![32, 38],
+            vec![32, 72],
+            vec![32, 183],
+            vec![32, 149],
+            vec![32, 135],
+            vec![32, 104],
+        ];
+        assert_eq!(solution, solve(&instance)?.0);
+        Ok(())
+    }
 }

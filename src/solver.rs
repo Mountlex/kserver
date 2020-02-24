@@ -4,6 +4,7 @@ use crate::seq::Sequence;
 use mcmf::*;
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt;
 
 #[derive(Copy, Clone, Ord, PartialOrd, PartialEq, Eq)]
 enum VertexType {
@@ -12,9 +13,40 @@ enum VertexType {
     ToVertex(usize),
 }
 
+#[derive(Debug, Clone)]
+pub struct SolverError {
+    msg: String,
+}
+
+impl fmt::Display for SolverError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Not all required predictions have been found: {}!",
+            self.msg
+        )
+    }
+}
+
+impl Error for SolverError {
+    fn description(&self) -> &str {
+        "Not all required predictions have been found!"
+    }
+
+    fn cause(&self) -> Option<&dyn Error> {
+        None
+    }
+}
+
+impl SolverError {
+    fn new(msg: String) -> SolverError {
+        SolverError { msg: msg }
+    }
+}
+
 const COST_CONST: i32 = -100000;
 
-pub fn solve(instance: &Instance) -> Result<(Sequence, u32), Box<dyn Error>> {
+pub fn solve(instance: &Instance) -> Result<(Sequence, u32), SolverError> {
     let mut graph = GraphBuilder::new();
     add_source_and_init_vertices(&mut graph, instance);
     add_request_verticies(&mut graph, instance);

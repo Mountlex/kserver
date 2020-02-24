@@ -1,3 +1,4 @@
+pub mod algorithm;
 pub mod cli;
 pub mod instance;
 pub mod instance_sample;

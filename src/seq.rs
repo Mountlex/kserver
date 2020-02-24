@@ -6,6 +6,16 @@ use std::error::Error;
 
 pub type Sequence = Vec<ServerConfiguration>;
 
+pub trait Prediction {
+    fn predicted_server(&self, idx: usize) -> Option<usize>;
+}
+
+impl Prediction for Sequence {
+    fn predicted_server(&self, idx: usize) -> Option<usize> {
+        return self[idx].moved_server(&self[idx + 1]);
+    }
+}
+
 pub trait SeqTools {
     fn new_seq(initial_configuration: ServerConfiguration) -> Self;
 

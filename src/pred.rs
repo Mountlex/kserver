@@ -34,7 +34,7 @@ impl Error for PredictionError {
         "Not all required predictions have been found!"
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         None
     }
 }
@@ -45,14 +45,14 @@ impl PredictionError {
     }
 }
 
-pub fn generate(
+pub fn generate_predictions(
     instance: &Instance,
     solution: &Sequence,
     config: &PredictionConfig,
 ) -> Result<Vec<Sequence>, PredictionError> {
-    let mut stepToPredictions: Vec<Vec<Sequence>> = vec![vec![]; config.number_of_preds as usize];
+    let mut step_to_predictions: Vec<Vec<Sequence>> = vec![vec![]; config.number_of_preds as usize];
 
-    stepToPredictions[0].push(solution.to_vec());
+    step_to_predictions[0].push(solution.to_vec());
 
     let mut rng = rand::thread_rng();
     let dist = Uniform::from(0..instance.length());
@@ -70,12 +70,17 @@ pub fn generate(
                     match last.moved_server(config) {
                         Some(server) => {
                             if rand::random() {
-                                pred.append_move(max(0, server - 1), instance.requests()[i]);
+                                if server > 0 {
+                                    pred.append_move(server - 1, instance.requests()[i]);
+                                } else {
+                                    pred.append_move(server + 1, instance.requests()[i]);
+                                }
                             } else {
-                                pred.append_move(
-                                    min(instance.k() - 1, server + 1),
-                                    instance.requests()[i],
-                                );
+                                if server < instance.k() - 1 {
+                                    pred.append_move(server + 1, instance.requests()[i]);
+                                } else {
+                                    pred.append_move(server - 1, instance.requests()[i]);
+                                }
                             }
                         }
                         None => pred.append_config(config.to_vec()),
@@ -88,17 +93,25 @@ pub fn generate(
             let bin_index: usize = (ratio / config.step_size).ceil() as usize;
 
             if bin_index < config.number_of_preds
-                && stepToPredictions[bin_index].len() < config.max_preds_per_round
+                && step_to_predictions[bin_index].len() < config.max_preds_per_round
             {
-                stepToPredictions[bin_index].push(pred);
+                step_to_predictions[bin_index].push(pred);
             }
+
+            if !step_to_predictions.iter().any(|preds| preds.is_empty()) {
+                break;
+            }
+        }
+
+        if !step_to_predictions.iter().any(|preds| preds.is_empty()) {
+            break;
         }
     }
 
-    let missing_bins: Vec<usize> = stepToPredictions
+    let missing_bins: Vec<usize> = step_to_predictions
         .iter()
         .enumerate()
-        .filter(|(i, preds)| preds.is_empty())
+        .filter(|(_, preds)| preds.is_empty())
         .map(|(i, _)| i)
         .collect();
     if !missing_bins.is_empty() {
@@ -115,7 +128,7 @@ pub fn generate(
 
         return Err(PredictionError::new(format!("{} missing!", msgs.join(","))));
     } else {
-        Ok(stepToPredictions
+        Ok(step_to_predictions
             .into_iter()
             .map(|preds| preds.choose(&mut rng).unwrap().to_vec())
             .collect())

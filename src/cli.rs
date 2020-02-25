@@ -1,5 +1,6 @@
 use crate::export;
-use crate::sample;
+use crate::instance_generator;
+use crate::sample_generator;
 use crate::sim;
 use std::error::Error;
 use structopt::StructOpt;
@@ -14,6 +15,12 @@ struct KServer {
     sim_config: sim::SimConfig,
 
     #[structopt(flatten)]
+    instance_config: instance_generator::InstanceConfig,
+
+    #[structopt(flatten)]
+    sample_config: sample_generator::SampleConfig,
+
+    #[structopt(flatten)]
     export_config: export::ExportConfig,
 
     #[structopt(subcommand)]
@@ -23,8 +30,11 @@ struct KServer {
 #[derive(StructOpt, Debug)]
 pub enum Command {
     /// Sample instances
-    #[structopt(name = "sample")]
-    Sample(sample::SampleCmd),
+    #[structopt(name = "sample_instances")]
+    SampleInstances(instance_generator::InstanceSampleConfig),
+
+    #[structopt(name = "load_instances")]
+    LoadInstances(instance_generator::InstanceLoadConfig),
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {
@@ -32,9 +42,17 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     println!("{:?}", cli);
 
-    let samples = match cli.cmd {
-        Command::Sample(config) => sample::run(&config)?,
+    let instances = match cli.cmd {
+        Command::SampleInstances(config) => {
+            instance_generator::generate_instances(&config, &cli.instance_config)?
+        }
+        Command::LoadInstances(config) => {
+            instance_generator::load_instances(&config, &cli.instance_config)?
+        }
     };
+
+    let samples = sample_generator::run(instances, &cli.sample_config)?;
+
     let results = sim::run(samples, &cli.sim_config)?;
     export::run(results, &cli.export_config)?;
 

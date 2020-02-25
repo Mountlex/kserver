@@ -1,6 +1,6 @@
 use crate::algorithm::{double_coverage, lambda_dc};
 use crate::instance::Instance;
-use crate::sample::Sample;
+use crate::sample_generator::Sample;
 use crate::seq::CostMetric;
 use crate::seq::Sequence;
 use console::style;
@@ -13,7 +13,7 @@ use itertools_num::linspace;
 
 #[derive(StructOpt, Debug)]
 pub struct SimConfig {
-    #[structopt(long = "num_lambdas", default_value = "5")]
+    #[structopt(long = "lambdas", default_value = "5")]
     pub number_of_lambdas: usize,
 }
 

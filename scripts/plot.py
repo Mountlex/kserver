@@ -23,7 +23,7 @@ def plot_lambda(df, eta_res):
 
 
 def plot_eta(df, eta_res):
-    df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res)
+    df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res) * eta_res
     max_bin = df['Bin'].max()
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
     dfDC = df.loc[:, ['CRdc', 'Bin']]

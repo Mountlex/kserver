@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-data = pd.read_csv('../result.csv')
+data = pd.read_csv('../result_10000_k3.csv')
 
 data['EtaOverOpt'] = data['Eta'] / data['OptCost']
 data['CRalg'] = data['AlgCost'] / data['OptCost']

@@ -4,7 +4,8 @@ use crate::sample_generator::Sample;
 use crate::seq::CostMetric;
 use crate::seq::Sequence;
 use console::style;
-use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
+use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use rayon::prelude::*;
 use std::error::Error;
 use std::fmt;
 use structopt::StructOpt;
@@ -105,7 +106,7 @@ fn simulate_samples(
     );
 
     let results: Vec<Vec<SimResult>> = samples
-        .into_iter()
+        .into_par_iter()
         .progress_with(pb)
         .map(|sample| simulate_sample(sample, &lambdas))
         .filter_map(Result::ok)

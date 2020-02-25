@@ -56,7 +56,7 @@ pub fn run(results: Vec<SimResult>, config: &ExportConfig) -> Result<(), Box<dyn
     let pb = ProgressBar::new(results.len() as u64);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] ({pos}/{len})"),
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] ({percent}%)"),
     );
     for res in results.into_iter().progress_with(pb) {
         let record = Record::from_result(res, &config);

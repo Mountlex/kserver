@@ -67,6 +67,12 @@ fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: 
             Capacity(1),
             Cost(0),
         );
+        graph.add_edge(
+            VertexType::InitVertex(i),
+            Vertex::Sink,
+            Capacity(1),
+            Cost(0),
+        );
     }
 }
 
@@ -144,6 +150,7 @@ fn order_servers_correctly(
     tuples: Vec<(usize, usize)>,
     instance: &Instance,
 ) -> Vec<(usize, usize)> {
+    // (server_id, req_idx, req)
     let mut first_requests: Vec<(usize, usize, i32)> = instance
         .initial_positions()
         .iter()
@@ -153,15 +160,17 @@ fn order_servers_correctly(
         .map(|(s, r)| (s, r, instance.req(&r)))
         .collect();
     first_requests.sort_by(|a, b| a.2.cmp(&b.2));
-    let server_mapping: HashMap<_, _> = first_requests
-        .iter()
+    let mut server_mapping: HashMap<_, _> = (0..instance.k()).enumerate().collect();
+    first_requests
+        .into_iter()
         .enumerate()
-        .map(|(i, (s, _, _))| (i, s))
-        .collect();
+        .for_each(|(i, (s, _, _))| {
+            server_mapping.insert(i, s);
+        });
 
     return tuples
         .iter()
-        .map(|(s, r)| (*server_mapping[s], *r))
+        .map(|(s, r)| (server_mapping[s], *r))
         .collect();
 }
 
@@ -190,7 +199,6 @@ mod tests {
         );
     }
 
-    /*
     #[test]
     fn solver_works() -> Result<(), Box<dyn Error>> {
         let instance = Instance::new(vec![38, 72, 183, 149, 135, 104], vec![32, 32]);
@@ -205,5 +213,5 @@ mod tests {
         ];
         assert_eq!(solution, solve(&instance)?.0);
         Ok(())
-    }*/
+    }
 }

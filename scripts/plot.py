@@ -1,13 +1,23 @@
+import argparse
+import sys
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-data = pd.read_csv('../result_10000_k3.csv')
+def create_arg_parser():
+    parser = argparse.ArgumentParser(description='Plot results from kserver simulation')
+    parser.add_argument('sampleFile')
+    parser.add_argument('--bin_size', default=0.25)
+    return parser
 
-data['EtaOverOpt'] = data['Eta'] / data['OptCost']
-data['CRalg'] = data['AlgCost'] / data['OptCost']
-data['CRdc'] = data['DcCost'] / data['OptCost']
 
+def get_data(filename):
+    data = pd.read_csv(filename)
+    data['EtaOverOpt'] = data['Eta'] / data['OptCost']
+    data['CRalg'] = data['AlgCost'] / data['OptCost']
+    data['CRdc'] = data['DcCost'] / data['OptCost']
+    return data
 
 def plot_lambda(df, eta_res):
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res)
@@ -36,6 +46,15 @@ def plot_eta(df, eta_res):
     plt.ylabel('Competitive ratio')
 
 
-plot_eta(data, 0.25)
-plot_lambda(data, 0.25)
-plt.show()
+if __name__ == "__main__":
+    arg_parser = create_arg_parser()
+    parsed_args = arg_parser.parse_args(sys.argv[1:])
+    if os.path.exists(parsed_args.sampleFile):
+        data = get_data(parsed_args.sampleFile)
+        plot_eta(data, parsed_args.bin_size)
+        plot_lambda(data, parsed_args.bin_size)
+        plt.show()
+    else:
+        print("Path not valid!")
+
+

@@ -2,21 +2,22 @@ use crate::server_config::config_diff;
 use crate::server_config::is_normalized;
 use crate::server_config::ServerConfig;
 use crate::server_config::ServerConfiguration;
+use crate::request::OnTheLine;
 use std::error::Error;
 
 pub type Sequence = Vec<ServerConfiguration>;
 
 pub trait Prediction {
-    fn predicted_server(&self, idx: usize, req: i32) -> usize;
+    fn predicted_server(&self, idx: usize, req: impl OnTheLine) -> usize;
 }
 
 impl Prediction for Sequence {
-    fn predicted_server(&self, idx: usize, req: i32) -> usize {
+    fn predicted_server(&self, idx: usize, req: impl OnTheLine) -> usize {
         self[idx].moved_server(&self[idx + 1]).unwrap_or_else(|| {
             self[idx + 1]
                 .iter()
                 .enumerate()
-                .find(|(_, &server)| server == req)
+                .find(|(_, &server)| server == req.start_pos())
                 .map(|(i, _)| i)
                 .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!"))
         })

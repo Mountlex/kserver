@@ -1,3 +1,5 @@
+use crate::request::{OnTheLine, SimpleRequest};
+
 pub type ServerConfiguration = Vec<i32>;
 
 pub trait ServerConfig {
@@ -5,11 +7,11 @@ pub trait ServerConfig {
 
     fn moved_server(&self, other: &Self) -> Option<usize>;
 
-    fn left_server(&self, req: i32) -> Option<usize>;
+    fn left_server(&self, req: impl OnTheLine) -> Option<usize>;
 
-    fn right_server(&self, req: i32) -> Option<usize>;
+    fn right_server(&self, req: impl OnTheLine) -> Option<usize>;
 
-    fn adjacent_servers(&self, req: i32) -> (Option<usize>, Option<usize>) {
+    fn adjacent_servers(&self, req: impl OnTheLine) -> (Option<usize>, Option<usize>) {
         (self.left_server(req), self.right_server(req))
     }
 }
@@ -57,17 +59,17 @@ impl ServerConfig for ServerConfiguration {
         res
     }
 
-    fn right_server(&self, req: i32) -> Option<usize> {
+    fn right_server(&self, req: impl OnTheLine) -> Option<usize> {
         self.into_iter()
             .enumerate()
-            .find(|(_, &r)| r >= req)
+            .find(|(_, &r)| r >= req.start_pos())
             .map(|(i, _)| i)
     }
-    fn left_server(&self, req: i32) -> Option<usize> {
+    fn left_server(&self, req: impl OnTheLine) -> Option<usize> {
         self.into_iter()
             .enumerate()
             .rev()
-            .find(|(_, &r)| r <= req)
+            .find(|(_, &r)| r <= req.start_pos())
             .map(|(i, _)| i)
     }
 }
@@ -99,15 +101,21 @@ mod tests {
     #[test]
     fn server_config_find_right_server_works() {
         let config = vec![10, 15, 25, 50];
-        assert_eq!(Some(2), config.right_server(20));
-        assert_eq!(Some(2), config.right_server(25));
-        assert_eq!(None, config.right_server(75));
+        let req1: SimpleRequest = 20.into();
+        let req2: SimpleRequest = 25.into();
+        let req3: SimpleRequest = 75.into();
+        assert_eq!(Some(2), config.right_server(req1));
+        assert_eq!(Some(2), config.right_server(req2));
+        assert_eq!(None, config.right_server(req3));
     }
     #[test]
     fn server_config_find_left_server_works() {
         let config = vec![10, 15, 25, 50];
-        assert_eq!(Some(1), config.left_server(20));
-        assert_eq!(Some(1), config.left_server(15));
-        assert_eq!(None, config.left_server(5));
+        let req1: SimpleRequest = 20.into();
+        let req2: SimpleRequest = 15.into();
+        let req3: SimpleRequest = 5.into();
+        assert_eq!(Some(1), config.left_server(req1));
+        assert_eq!(Some(1), config.left_server(req2));
+        assert_eq!(None, config.left_server(req3));
     }
 }

@@ -2,6 +2,7 @@ use crate::algorithm::{double_coverage, lambda_dc};
 use crate::instance::Instance;
 use crate::sample_generator::Sample;
 use crate::seq::CostMetric;
+use crate::request::*;
 use crate::seq::Sequence;
 use console::style;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
@@ -37,8 +38,8 @@ impl Error for SimulatorError {
     }
 }
 
-pub struct SimResult {
-    pub instance: Instance,
+pub struct SimResult<T> {
+    pub instance: Instance<T>,
     pub solution: Sequence,
     pub eta: u32,
     pub dc_cost: u32,
@@ -46,7 +47,7 @@ pub struct SimResult {
     pub lambda: f32,
 }
 
-pub fn run(samples: Vec<Sample>, config: &SimConfig) -> Result<Vec<SimResult>, Box<dyn Error>> {
+pub fn run<T>(samples: Vec<Sample<T>>, config: &SimConfig) -> Result<Vec<SimResult<T>>, Box<dyn Error>> {
     println!("{}", style("Start simulating...").bold().cyan());
     let results = simulate_samples(
         samples,
@@ -59,30 +60,39 @@ pub fn run(samples: Vec<Sample>, config: &SimConfig) -> Result<Vec<SimResult>, B
     Ok(results)
 }
 
-fn simulate_sample(sample: Sample, lambdas: &Vec<f32>) -> Result<Vec<SimResult>, SimulatorError> {
-    let results = lambdas
-        .iter()
-        .flat_map(|lambda| {
-            let dc_cost = double_coverage(&sample.instance).costs();
-            sample
-                .predictions
+trait Simulation<T> {
+    fn simulate(&self, lambda: &f32) -> Vec<SimResult<T>>;
+}
+
+impl Simulation<SimpleRequest> for Sample<SimpleRequest> {
+    fn simulate(self: &Sample<SimpleRequest>, lambda: &f32) -> Vec<SimResult<SimpleRequest>> {
+        let dc_cost = double_coverage(&self.instance).costs();
+        self.predictions
                 .iter()
                 .map(|pred| {
-                    let alg = lambda_dc(&sample.instance, pred, *lambda);
+                    let alg = lambda_dc(&self.instance, pred, *lambda);
                     let alg_cost = alg.costs();
-                    let eta = pred.diff(&sample.solution);
+                    let eta = pred.diff(&self.solution);
                     SimResult {
-                        instance: sample.instance.clone(),
-                        solution: sample.solution.to_vec(),
+                        instance: self.instance.clone(),
+                        solution: self.solution.to_vec(),
                         eta,
                         dc_cost: dc_cost,
                         alg_cost: alg_cost,
                         lambda: *lambda,
                     }
                 })
-                .collect::<Vec<SimResult>>()
+                .collect::<Vec<SimResult<SimpleRequest>>>()
+            }
+}
+
+fn simulate_sample(sample: Sample<SimpleRequest>, lambdas: &Vec<f32>) -> Result<Vec<SimResult<SimpleRequest>>, SimulatorError> {
+    let results = lambdas
+        .iter()
+        .flat_map(|lambda| {
+            sample.simulate(lambda)
         })
-        .collect::<Vec<SimResult>>();
+        .collect::<Vec<SimResult<SimpleRequest>>>();
 
     if results
         .iter()
@@ -95,9 +105,9 @@ fn simulate_sample(sample: Sample, lambdas: &Vec<f32>) -> Result<Vec<SimResult>,
 }
 
 fn simulate_samples(
-    samples: Vec<Sample>,
+    samples: Vec<Sample<SimpleRequest>>,
     lambdas: Vec<f32>,
-) -> Result<Vec<SimResult>, Box<dyn Error>> {
+) -> Result<Vec<SimResult<SimpleRequest>>, Box<dyn Error>> {
     let pb = ProgressBar::new(samples.len() as u64);
 
     pb.set_style(
@@ -105,13 +115,13 @@ fn simulate_samples(
             .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] ({pos}/{len})"),
     );
 
-    let results: Vec<Vec<SimResult>> = samples
-        .into_par_iter()
-        .progress_with(pb)
+    let results: Vec<Vec<SimResult<SimpleRequest>>> = samples
+        .into_iter()
+        //.progress_with(pb)
         .map(|sample| simulate_sample(sample, &lambdas))
         .filter_map(Result::ok)
-        .collect::<Vec<Vec<SimResult>>>();
+        .collect::<Vec<Vec<SimResult<SimpleRequest>>>>();
 
-    let res = results.into_iter().flatten().collect::<Vec<SimResult>>();
+    let res = results.into_iter().flatten().collect::<Vec<SimResult<SimpleRequest>>>();
     Ok(res)
 }

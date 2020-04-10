@@ -10,5 +10,6 @@ pub mod seq;
 pub mod server_config;
 pub mod sim;
 pub mod solver;
+pub mod request;
 
 pub struct Config {}

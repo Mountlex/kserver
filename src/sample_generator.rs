@@ -1,4 +1,4 @@
-use crate::instance::Instance;
+use crate::instance::*;
 use crate::pred_generator::{run_generate_predictions, PredictionConfig};
 use crate::seq::{normalize_sequence, Sequence};
 use crate::solver::solve;
@@ -14,15 +14,28 @@ pub struct SampleConfig {
     pub pred_config: PredictionConfig,
 }
 
+pub enum Sample {
+    KServerSample {
+        instance: KServerInstance,
+        solution: Sequence,
+        predictions: Vec<Sequence>,
+    },    
+    KTaxiSample {
+        instance: KTaxiInstance,
+        solution: Sequence,
+        predictions: Vec<Sequence>,
+    },
+}
+
 #[derive(Clone)]
-pub struct Sample {
-    pub instance: Instance,
+pub struct Sample<T> {
+    pub instance: Instance<T>,
     pub solution: Sequence,
     pub predictions: Vec<Sequence>,
 }
 
-impl Sample {
-    fn new(instance: Instance, solution: Sequence) -> Sample {
+impl <T> Sample<T> {
+    fn new(instance: Instance<T>, solution: Sequence) -> Sample<T> {
         Sample {
             instance,
             solution,
@@ -31,7 +44,7 @@ impl Sample {
     }
 }
 
-pub fn run(instances: Vec<Instance>, config: &SampleConfig) -> Result<Vec<Sample>, Box<dyn Error>> {
+pub fn run<T>(instances: Vec<Instance<T>>, config: &SampleConfig) -> Result<Vec<Sample<T>>, Box<dyn Error>> {
     println!("{}", style("Start generating samples...").bold().cyan());
     println!("{} Solving instances...", style("[1/3]").bold().dim());
     let raw_samples = solve_instances(instances)?;
@@ -52,7 +65,7 @@ pub fn run(instances: Vec<Instance>, config: &SampleConfig) -> Result<Vec<Sample
     Ok(samples_with_preds)
 }
 
-fn normalize_solutions(samples: Vec<Sample>) -> Result<Vec<Sample>, Box<dyn Error>> {
+fn normalize_solutions<T>(samples: Vec<Sample<T>>) -> Result<Vec<Sample<T>>, Box<dyn Error>> {
     let pb = ProgressBar::new(samples.len() as u64);
 
     pb.set_style(
@@ -72,7 +85,7 @@ fn normalize_solutions(samples: Vec<Sample>) -> Result<Vec<Sample>, Box<dyn Erro
     Ok(solutions)
 }
 
-fn solve_instances(instances: Vec<Instance>) -> Result<Vec<Sample>, Box<dyn Error>> {
+fn solve_instances<T>(instances: Vec<Instance<T>>) -> Result<Vec<Sample<T>>, Box<dyn Error>> {
     let pb = ProgressBar::new(instances.len() as u64);
     pb.set_style(
         ProgressStyle::default_bar()

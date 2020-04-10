@@ -1,4 +1,5 @@
-use crate::instance::Instance;
+use crate::instance::*;
+use crate::request::*;
 use crate::seq::{Sequence, SequenceCreation};
 use mcmf::*;
 use std::collections::HashMap;
@@ -46,20 +47,32 @@ impl SolverError {
 
 const COST_CONST: i32 = -100000;
 
-pub fn solve(instance: &Instance) -> Result<(Sequence, u32), SolverError> {
-    let mut graph = GraphBuilder::new();
-    add_source_and_init_vertices(&mut graph, instance);
-    add_request_verticies(&mut graph, instance);
-    add_request_edges(&mut graph, instance);
-
-    let (costs, paths) = graph.mcmf();
-    let seq = create_sequence(paths, instance);
-    let fixed_costs = costs as i32 + (-COST_CONST * instance.length() as i32);
-
-    return Ok((seq, fixed_costs as u32));
+trait Solver {
+    fn solve(&self) -> Result<(Sequence, u32), SolverError>;
 }
 
-fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: &Instance) {
+impl Solver for Instance<SimpleRequest> {
+    fn solve<T>(self: &Instance<SimpleRequest>) -> Result<(Sequence, u32), SolverError> {
+        let mut graph = GraphBuilder::new();
+        add_source_and_init_vertices(&mut graph, self);
+        add_request_verticies(&mut graph, self);
+        add_request_edges(&mut graph, self);
+    
+        let (costs, paths) = graph.mcmf();
+        let seq = create_sequence(paths, self);
+        let fixed_costs = costs as i32 + (-COST_CONST * self.length() as i32);
+    
+        return Ok((seq, fixed_costs as u32));
+    }
+}
+
+impl Solver for Instance<RelocationRequest> {
+    fn solve<T>(self: &Instance<RelocationRequest>) -> Result<(Sequence, u32), SolverError> {
+        Err(SolverError { msg: "not implemented".to_string() })
+    }
+}
+
+fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: &KServerInstance) {
     for (i, _) in instance.initial_positions().iter().enumerate() {
         graph.add_edge(
             Vertex::Source,
@@ -76,14 +89,14 @@ fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: 
     }
 }
 
-fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &Instance) {
+fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &KServerInstance) {
     for (i, x) in instance.requests().iter().enumerate() {
         for (j, y) in instance.initial_positions().iter().enumerate() {
             graph.add_edge(
                 VertexType::InitVertex(j),
                 VertexType::FromVertex(i),
                 Capacity(1),
-                Cost((x - y).abs()),
+                Cost((x.pos - y).abs()),
             );
         }
         graph.add_edge(
@@ -96,7 +109,7 @@ fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &Instan
     }
 }
 
-fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &Instance) {
+fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &KServerInstance) {
     for (i, x) in instance.requests().iter().enumerate() {
         for (j, y) in instance.requests().iter().enumerate() {
             if i < j {
@@ -104,7 +117,7 @@ fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &Instance) 
                     VertexType::ToVertex(i),
                     VertexType::FromVertex(j),
                     Capacity(1),
-                    Cost((x - y).abs()),
+                    Cost((x.pos - y.pos).abs()),
                 );
             }
         }
@@ -126,7 +139,7 @@ fn is_move_edge(v1: &Vertex<VertexType>, v2: &Vertex<VertexType>) -> Option<usiz
     }
 }
 
-fn create_sequence(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> Sequence {
+fn create_sequence(paths: Vec<mcmf::Path<VertexType>>, instance: &KServerInstance) -> Sequence {
     let mut seq = Sequence::new_seq(instance.initial_positions().to_vec());
     let tuples: Vec<(usize, usize)> = paths
         .iter()
@@ -141,14 +154,14 @@ fn create_sequence(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> S
     let mut fixed_tuples = order_servers_correctly(tuples, instance);
     fixed_tuples.sort_by_key(|&(_, r)| r);
     for (s, r) in fixed_tuples.iter() {
-        seq.append_move(*s, instance.req(r));
+        seq.append_move(*s, instance.req(r).pos);
     }
     seq
 }
 
 fn order_servers_correctly(
     tuples: Vec<(usize, usize)>,
-    instance: &Instance,
+    instance: &KServerInstance,
 ) -> Vec<(usize, usize)> {
     // (server_id, req_idx, req)
     let mut first_requests: Vec<(usize, usize, i32)> = instance
@@ -157,7 +170,7 @@ fn order_servers_correctly(
         .enumerate()
         .flat_map(|(i, _)| tuples.iter().find(|(s, _)| i == *s))
         .map(|s| *s)
-        .map(|(s, r)| (s, r, instance.req(&r)))
+        .map(|(s, r)| (s, r, instance.req(&r).pos))
         .collect();
     first_requests.sort_by(|a, b| a.2.cmp(&b.2));
     let mut server_mapping: HashMap<_, _> = (0..instance.k()).enumerate().collect();
@@ -181,8 +194,8 @@ mod tests {
 
     #[test]
     fn solver_costs_1_works() -> Result<(), Box<dyn Error>> {
-        let instance = Instance::new(vec![78, 77, 30, 8, 15, 58, 37, 19, 11, 7], vec![91, 91]);
-        let solution = solve(&instance);
+        let instance = KServerInstance::new(vec![78, 77, 30, 8, 15, 58, 37, 19, 11, 7].into(), vec![91, 91]);
+        let solution = instance.solve();
         let (seq, costs) = solution?;
         assert_eq!(160, costs);
         assert_eq!(160, seq.costs());
@@ -191,7 +204,7 @@ mod tests {
 
     #[test]
     fn solver_order_works() {
-        let instance = Instance::new(vec![40, 60, 50], vec![50, 50]);
+        let instance = KServerInstance::new(vec![40, 60, 50].into(), vec![50, 50]);
         let tuples = vec![(1, 0), (0, 1), (1, 2)];
         assert_eq!(
             vec![(0, 0), (1, 1), (0, 2)],
@@ -201,7 +214,7 @@ mod tests {
 
     #[test]
     fn solver_works() -> Result<(), Box<dyn Error>> {
-        let instance = Instance::new(vec![38, 72, 183, 149, 135, 104], vec![32, 32]);
+        let instance = KServerInstance::new(vec![38, 72, 183, 149, 135, 104].into(), vec![32, 32]);
         let solution = vec![
             vec![32, 32],
             vec![32, 38],
@@ -211,7 +224,7 @@ mod tests {
             vec![32, 135],
             vec![32, 104],
         ];
-        assert_eq!(solution, solve(&instance)?.0);
+        assert_eq!(solution, instance.solve()?.0);
         Ok(())
     }
 }

@@ -1,20 +1,21 @@
-use crate::instance::Instance;
+use crate::instance::KServerInstance;
+use crate::request::*;
 use crate::seq::{Prediction, Sequence, SequenceCreation};
 use crate::server_config::*;
 use std::cmp::min;
 
-pub fn double_coverage(instance: &Instance) -> Sequence {
+pub fn double_coverage(instance: &KServerInstance) -> Sequence {
     let dc = DoubleCoverage;
     return dc.run(instance);
 }
 
-pub fn lambda_dc(instance: &Instance, prediction: &Sequence, lambda: f32) -> Sequence {
+pub fn lambda_dc(instance: &KServerInstance, prediction: &Sequence, lambda: f32) -> Sequence {
     let alg = LambdaDC::new(prediction.to_vec(), lambda);
     return alg.run(instance);
 }
 
 trait Algorithm {
-    fn run(&self, instance: &Instance) -> Sequence {
+    fn run(&self, instance: &KServerInstance) -> Sequence {
         let mut seq = Sequence::new_seq(instance.initial_positions().to_vec());
 
         for (idx, &req) in instance.requests().into_iter().enumerate() {
@@ -30,7 +31,7 @@ trait Algorithm {
     fn next_move(
         &self,
         current: &ServerConfiguration,
-        next_request: i32,
+        next_request: SimpleRequest,
         request_index: usize,
     ) -> ServerConfiguration;
 }
@@ -41,21 +42,22 @@ impl Algorithm for DoubleCoverage {
     fn next_move(
         &self,
         current: &ServerConfiguration,
-        req: i32,
+        req: SimpleRequest,
         _req_idx: usize,
     ) -> ServerConfiguration {
         let (left, right) = current.adjacent_servers(req);
         let mut res = current.to_vec();
+        let reqPos = req.pos;
         match (left, right) {
             (Some(i), Some(j)) => {
-                let d = min(current[j] - req, req - current[i]);
+                let d = min(current[j] - reqPos, reqPos - current[i]);
                 res[i] += d;
                 res[j] -= d;
             }
             (Some(i), None) | (None, Some(i)) => {
-                res[i] = req;
+                res[i] = reqPos;
             }
-            _ => panic!("Should not happend!"),
+            _ => panic!("Should not happened!"),
         }
         return res;
     }
@@ -86,22 +88,23 @@ impl Algorithm for LambdaDC {
     fn next_move(
         &self,
         current: &ServerConfiguration,
-        req: i32,
+        req: SimpleRequest,
         req_idx: usize,
     ) -> ServerConfiguration {
+        let reqPos = req.pos;
         let (left, right) = current.adjacent_servers(req);
         let mut res = current.to_vec();
         match (left, right) {
             (Some(i), Some(j)) => {
                 if i == j {
-                    res[i] = req;
+                    res[i] = reqPos;
                 } else {
                     let predicted = self.prediction.predicted_server(req_idx, req);
                     if self.lambda == 0.0 {
-                        res[predicted] = req;
+                        res[predicted] = reqPos;
                     } else {
                         let other: usize = *[i, j].iter().find(|&x| *x != predicted).unwrap();
-                        let distances = self.get_distances(current[predicted], current[other], req);
+                        let distances = self.get_distances(current[predicted], current[other], reqPos);
                         if i == predicted {
                             // left server
                             res[i] += distances.0.floor() as i32;
@@ -114,7 +117,7 @@ impl Algorithm for LambdaDC {
                 }
             }
             (Some(i), None) | (None, Some(i)) => {
-                res[i] = req;
+                res[i] = reqPos;
             }
             _ => panic!("Should not happend!"),
         }
@@ -128,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_double_coverage() {
-        let instance = Instance::new(vec![20, 80, 30, 70, 60, 50], vec![50, 50]);
+        let instance = KServerInstance::new(vec![20, 80, 30, 70, 60, 50].into(), vec![50, 50]);
         let dc = DoubleCoverage;
         assert_eq!(
             vec![
@@ -146,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_lambda_dc_coverage() {
-        let instance = Instance::new(vec![20, 80, 40, 64], vec![50, 50]);
+        let instance = KServerInstance::new(vec![20, 80, 40, 64].into(), vec![50, 50]);
         let pred = vec![
             vec![50, 50],
             vec![20, 50],
@@ -169,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_lambda_dc_coverage_lambda_zero() {
-        let instance = Instance::new(vec![20, 80, 40, 64], vec![50, 50]);
+        let instance = KServerInstance::new(vec![20, 80, 40, 64].into(), vec![50, 50]);
         let pred = vec![
             vec![50, 50],
             vec![20, 50],

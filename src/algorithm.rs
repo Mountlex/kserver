@@ -36,6 +36,30 @@ trait Algorithm {
     ) -> ServerConfiguration;
 }
 
+trait KTaxiAlgorithm {
+    fn run(&self, instance: &Instance) -> Schedule {
+        let mut schedule = Schedule::new_schedule(instance.initial_positions().to_vec());
+
+        let mut active = 0;
+        for &req in instance.requests().into_iter() {
+            let current = schedule.last().unwrap();
+            let (new_active, mut next) = self.next_move(current, active, req);
+            active = new_active;
+            next.sort();
+            schedule.append_config(next);
+        }
+
+        schedule
+    }
+
+    fn next_move(
+        &self,
+        current: &ServerConfiguration,
+        active: usize,
+        next_request: Request,
+    ) -> (usize, ServerConfiguration);
+}
+
 struct DoubleCoverage;
 
 impl Algorithm for DoubleCoverage {
@@ -60,6 +84,35 @@ impl Algorithm for DoubleCoverage {
             _ => panic!("Should not happened!"),
         }
         return res;
+    }
+}
+
+struct BiasedDC;
+
+impl KTaxiAlgorithm for BiasedDC {
+    fn next_move(
+        &self,
+        current: &ServerConfiguration,
+        active: usize,
+        req: Request,
+    ) -> (usize, ServerConfiguration) {
+        let passive = 1 - active; // other server
+        let mut res = current.to_vec();
+        let pos = req.get_request_pos();
+
+        let dp = min(2 * (pos - current[active]).abs(), (pos-current[passive]).abs()) as f32;
+        let da = dp / 2.0 as f32;
+
+        res[active] += (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
+        res[passive] += (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
+
+        let new_active: usize = res.iter().enumerate().filter(|(_, &p)| p == pos).map(|(i, _)| i).last().unwrap();
+
+        if let Request::Relocation(relocation) = req {
+            res[new_active] = relocation.t;
+        }
+
+        return (new_active, res);
     }
 }
 

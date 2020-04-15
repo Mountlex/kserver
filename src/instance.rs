@@ -1,48 +1,47 @@
 use crate::request::*;
 
 #[derive(Clone, Debug)]
-pub struct Instance<T> {
-    requests: Vec<T>,
+pub struct Instance {
+    requests: Vec<Request>,
     initial_positions: Vec<i32>,
 }
 
-impl<T> Instance<T> {
-    pub fn new(requests: Vec<T>, initial_positions: Vec<i32>) -> Instance<T> {
+impl Instance {
+    pub fn new(requests: Vec<Request>, initial_positions: Vec<i32>) -> Instance {
         Instance {
             requests: requests,
             initial_positions: initial_positions,
         }
-    }
+    }    
     pub fn length(&self) -> usize {
         self.requests.len()
     }
     pub fn k(&self) -> usize {
         self.initial_positions.len()
     }
-    pub fn requests(&self) -> &Vec<T> {
+    pub fn requests(&self) -> &Vec<Request> {
         &self.requests
     }
     pub fn initial_positions(&self) -> &Vec<i32> {
         &self.initial_positions
     }
-    pub fn req(&self, index: &usize) -> T {
+    pub fn req(&self, index: &usize) -> Request {
         return self.requests[*index];
     }
 }
 
-pub type KServerInstance = Instance<SimpleRequest>;
 
-impl From<Vec<i32>> for Vec<SimpleRequest> {
-    fn from(requests: Vec<i32>) -> Vec<SimpleRequest> {
-        requests.into_iter().map(|req| req.into()).collect()
+impl From<(Vec<i32>, Vec<i32>)> for Instance {
+    fn from(instance: (Vec<i32>, Vec<i32>)) -> Instance {
+        let requests = instance.0.into_iter().map(|req| req.into()).collect();
+        Instance::new(requests, instance.1)
     }
 }
 
-pub type KTaxiInstance = Instance<RelocationRequest>;
-
-impl From<Vec<(i32,i32)>> for Vec<RelocationRequest> {
-    fn from(requests: Vec<(i32, i32)>) -> Vec<RelocationRequest> {
-        requests.into_iter().map(|req| req.into()).collect()
+impl From<(Vec<(i32, i32)>, Vec<i32>)> for Instance {
+    fn from(instance: (Vec<(i32, i32)>, Vec<i32>)) -> Instance {
+        let requests = instance.0.into_iter().map(|req| req.into()).collect();
+        Instance::new(requests, instance.1)
     }
 }
 
@@ -50,8 +49,8 @@ impl From<Vec<(i32,i32)>> for Vec<RelocationRequest> {
 mod tests {
     use super::*;
 
-    fn get_instance() -> KServerInstance {
-        return KServerInstance::new(vec![1, 3, 6, 9].into(), vec![5, 5]);
+    fn get_instance() -> Instance {
+        return Instance::from((vec![1, 3, 6, 9], vec![5, 5]));
     }
 
     #[test]

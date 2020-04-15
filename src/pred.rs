@@ -1,6 +1,6 @@
 use crate::instance::Instance;
 use crate::pred_generator::PredictionConfig;
-use crate::seq::{CostMetric, Sequence, SequenceCreation};
+use crate::schedule::{CostMetric, Schedule, ScheduleCreation};
 use crate::server_config::ServerConfig;
 use rand::distributions::{Distribution, Uniform};
 use rand::seq::SliceRandom;
@@ -40,10 +40,10 @@ impl PredictionError {
 
 pub fn generate_predictions(
     instance: &Instance,
-    solution: &Sequence,
+    solution: &Schedule,
     config: &PredictionConfig,
-) -> Result<Vec<Sequence>, PredictionError> {
-    let mut step_to_predictions: Vec<Vec<Sequence>> =
+) -> Result<Vec<Schedule>, PredictionError> {
+    let mut step_to_predictions: Vec<Vec<Schedule>> =
         vec![vec![]; config.number_of_predictions as usize];
 
     step_to_predictions[0].push(solution.to_vec());
@@ -56,7 +56,7 @@ pub fn generate_predictions(
             let mut correct_preds = vec![true; instance.length()];
             (1..number_of_wrong_servers).for_each(|_| correct_preds[dist.sample(&mut rng)] = false);
 
-            let mut pred = Sequence::new_seq(instance.initial_positions().to_vec());
+            let mut pred = Schedule::new_schedule(instance.initial_positions().to_vec());
             for (i, (last, config)) in solution.iter().zip(solution.iter().skip(1)).enumerate() {
                 if correct_preds[i] {
                     pred.append_config(config.to_vec());
@@ -65,15 +65,15 @@ pub fn generate_predictions(
                         Some(server) => {
                             if rand::random() {
                                 if server > 0 {
-                                    pred.append_move(server - 1, instance.requests()[i]);
+                                    pred.append_move(server - 1, instance.requests()[i].get_request_pos());
                                 } else {
-                                    pred.append_move(server + 1, instance.requests()[i]);
+                                    pred.append_move(server + 1, instance.requests()[i].get_request_pos());
                                 }
                             } else {
                                 if server < instance.k() - 1 {
-                                    pred.append_move(server + 1, instance.requests()[i]);
+                                    pred.append_move(server + 1, instance.requests()[i].get_request_pos());
                                 } else {
-                                    pred.append_move(server - 1, instance.requests()[i]);
+                                    pred.append_move(server - 1, instance.requests()[i].get_request_pos());
                                 }
                             }
                         }

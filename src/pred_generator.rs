@@ -1,5 +1,5 @@
-use crate::pred::generate_predictions;
-use crate::sample_generator::Sample;
+use crate::pred::*;
+use crate::sample_generator::{KServerSample, KTaxiSample, Sample};
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::error::Error;
@@ -20,6 +20,29 @@ pub struct PredictionConfig {
     pub max_preds_per_round: usize,
 }
 
+impl Sample {
+    fn add_predictions(self, config: &PredictionConfig) -> Result<Sample, PredictionError> {
+        match self {
+            Sample::KServer(sample) => match generate_predictions(&sample.instance, &sample.solution, config) {
+                    Ok(preds) => Ok(KServerSample {
+                        predictions: preds,
+                        instance: sample.instance,
+                        solution: sample.solution
+                    }.into()),
+                    Err(e) => Err(e),
+                },
+            Sample::KTaxi(sample) => match generate_predictions(&sample.instance, &sample.solution, config) {
+                Ok(preds) => Ok(KTaxiSample {
+                    predictions: preds,
+                    instance: sample.instance,
+                        solution: sample.solution
+                }.into()),
+                Err(e) => Err(e),
+            }
+        }
+    }
+}
+
 pub fn run_generate_predictions(
     samples: Vec<Sample>,
     config: &PredictionConfig,
@@ -34,15 +57,7 @@ pub fn run_generate_predictions(
     let samples_with_preds = samples
         .into_par_iter()
         .progress_with(pb)
-        .map(
-            |sample| match generate_predictions(&sample.instance, &sample.solution, &config) {
-                Ok(preds) => Ok(Sample {
-                    predictions: preds,
-                    ..sample
-                }),
-                Err(e) => Err(e),
-            },
-        )
+        .map(|sample| sample.add_predictions(config))
         .filter_map(Result::ok)
         .collect();
 

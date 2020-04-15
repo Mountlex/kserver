@@ -1,4 +1,4 @@
-use crate::seq::CostMetric;
+use crate::schedule::CostMetric;
 use crate::sim::SimResult;
 use console::style;
 use csv::Writer;
@@ -28,7 +28,8 @@ struct Record {
 
 impl Record {
     #[allow(unused_variables)]
-    fn from_result(res: SimResult, config: &ExportConfig) -> Record {
+    fn from_result(sim_res: SimResult, config: &ExportConfig) -> Record {
+        if let SimResult::KServer(res) = sim_res {
         let rec = Record {
             numberOfServers: res.instance.k() as u64,
             numberOfRequests: res.instance.length() as u64,
@@ -42,7 +43,10 @@ impl Record {
             panic!("This should not happen!")
         }
         return rec;
+    } else {
+        panic!("Not implemented")
     }
+}
 }
 
 pub fn run(results: Vec<SimResult>, config: &ExportConfig) -> Result<(), Box<dyn Error>> {

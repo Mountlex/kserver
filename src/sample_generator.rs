@@ -1,7 +1,6 @@
 use crate::instance::*;
 use crate::pred_generator::{run_generate_predictions, PredictionConfig};
-use crate::seq::{normalize_sequence, Sequence};
-use crate::solver::solve;
+use crate::schedule::{normalize_scheduleuence, Schedule};
 use console::style;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressIterator, ProgressStyle};
 use rayon::prelude::*;
@@ -15,36 +14,73 @@ pub struct SampleConfig {
 }
 
 pub enum Sample {
-    KServerSample {
-        instance: KServerInstance,
-        solution: Sequence,
-        predictions: Vec<Sequence>,
-    },    
-    KTaxiSample {
-        instance: KTaxiInstance,
-        solution: Sequence,
-        predictions: Vec<Sequence>,
-    },
+    KServer(KServerSample),
+    KTaxi(KTaxiSample),
 }
 
 #[derive(Clone)]
-pub struct Sample<T> {
-    pub instance: Instance<T>,
-    pub solution: Sequence,
-    pub predictions: Vec<Sequence>,
+pub struct KServerSample {
+    pub instance: Instance,
+    pub solution: Schedule,
+    pub predictions: Vec<Schedule>,
 }
 
-impl <T> Sample<T> {
-    fn new(instance: Instance<T>, solution: Sequence) -> Sample<T> {
-        Sample {
+#[derive(Clone)]
+pub struct KTaxiSample {
+    pub instance: Instance,
+    pub solution: Schedule,
+    pub predictions: Vec<Schedule>,
+}
+
+impl KTaxiSample {
+    pub fn new(instance: Instance, solution: Schedule) -> KTaxiSample {
+        KTaxiSample {
             instance,
             solution,
-            predictions: vec![],
+            predictions: vec![]
+        }
+    }
+}
+impl KServerSample {
+    pub fn new(instance: Instance, solution: Schedule) -> KServerSample {
+        KServerSample {
+            instance,
+            solution,
+            predictions: vec![]
         }
     }
 }
 
-pub fn run<T>(instances: Vec<Instance<T>>, config: &SampleConfig) -> Result<Vec<Sample<T>>, Box<dyn Error>> {
+impl From<KServerSample> for Sample {
+    fn from(sample: KServerSample) -> Sample {
+        Sample::KServer(sample)
+    }
+}
+
+impl From<KTaxiSample> for Sample {
+    fn from(sample: KTaxiSample) -> Sample {
+        Sample::KTaxi(sample)
+    }
+}
+
+
+impl Sample {
+    pub fn normalize(self) -> Result<Sample, Box<dyn Error>> {
+        match self {
+            Sample::KServer(sample) => match normalize_scheduleuence(sample.solution) {
+                Ok(s) => Ok(KServerSample::new(sample.instance, s).into()),
+                Err(e) => Err(e),
+            },            
+            Sample::KTaxi(sample) => match normalize_scheduleuence(sample.solution) {
+                Ok(s) => Ok(KTaxiSample::new(sample.instance, s).into()),
+                Err(e) => Err(e),
+            },
+        }
+    }
+}
+
+
+pub fn run(instances: Vec<Instance>, config: &SampleConfig) -> Result<Vec<Sample>, Box<dyn Error>> {
     println!("{}", style("Start generating samples...").bold().cyan());
     println!("{} Solving instances...", style("[1/3]").bold().dim());
     let raw_samples = solve_instances(instances)?;
@@ -65,7 +101,7 @@ pub fn run<T>(instances: Vec<Instance<T>>, config: &SampleConfig) -> Result<Vec<
     Ok(samples_with_preds)
 }
 
-fn normalize_solutions<T>(samples: Vec<Sample<T>>) -> Result<Vec<Sample<T>>, Box<dyn Error>> {
+fn normalize_solutions(samples: Vec<Sample>) -> Result<Vec<Sample>, Box<dyn Error>> {
     let pb = ProgressBar::new(samples.len() as u64);
 
     pb.set_style(
@@ -75,17 +111,14 @@ fn normalize_solutions<T>(samples: Vec<Sample<T>>) -> Result<Vec<Sample<T>>, Box
     let solutions = samples
         .into_iter()
         .progress_with(pb)
-        .map(|sample| match normalize_sequence(sample.solution) {
-            Ok(s) => Ok(Sample::new(sample.instance, s)),
-            Err(e) => Err(e),
-        })
+        .map(|sample| sample.normalize())
         .filter_map(Result::ok)
         .collect();
 
     Ok(solutions)
 }
 
-fn solve_instances<T>(instances: Vec<Instance<T>>) -> Result<Vec<Sample<T>>, Box<dyn Error>> {
+fn solve_instances(instances: Vec<Instance>) -> Result<Vec<Sample>, Box<dyn Error>> {
     let pb = ProgressBar::new(instances.len() as u64);
     pb.set_style(
         ProgressStyle::default_bar()
@@ -94,10 +127,7 @@ fn solve_instances<T>(instances: Vec<Instance<T>>) -> Result<Vec<Sample<T>>, Box
     let solutions = instances
         .into_par_iter()
         .progress_with(pb)
-        .map(|instance| match solve(&instance) {
-            Ok(s) => Ok(Sample::new(instance, s.0)),
-            Err(e) => Err(e),
-        })
+        .map(|instance| instance.build_sample())
         .filter_map(Result::ok)
         .collect();
 

@@ -1,6 +1,6 @@
 use crate::instance::*;
-use crate::request::*;
-use crate::seq::{Sequence, SequenceCreation};
+use crate::sample_generator::*;
+use crate::schedule::{Schedule, ScheduleCreation};
 use mcmf::*;
 use std::collections::HashMap;
 use std::error::Error;
@@ -47,32 +47,30 @@ impl SolverError {
 
 const COST_CONST: i32 = -100000;
 
-trait Solver {
-    fn solve(&self) -> Result<(Sequence, u32), SolverError>;
-}
 
-impl Solver for Instance<SimpleRequest> {
-    fn solve<T>(self: &Instance<SimpleRequest>) -> Result<(Sequence, u32), SolverError> {
+
+impl Instance {
+    pub fn solve(self: &Instance) -> Result<(Schedule, u32), SolverError> {
         let mut graph = GraphBuilder::new();
         add_source_and_init_vertices(&mut graph, self);
         add_request_verticies(&mut graph, self);
         add_request_edges(&mut graph, self);
     
         let (costs, paths) = graph.mcmf();
-        let seq = create_sequence(paths, self);
+        let schedule = create_scheduleuence(paths, self);
         let fixed_costs = costs as i32 + (-COST_CONST * self.length() as i32);
     
-        return Ok((seq, fixed_costs as u32));
+        return Ok((schedule, fixed_costs as u32));
+    }
+
+    pub fn build_sample(self: Instance) -> Result<Sample, SolverError> {
+        let (solution, _) = self.solve()?;
+        Ok(KServerSample::new(self, solution).into())
     }
 }
 
-impl Solver for Instance<RelocationRequest> {
-    fn solve<T>(self: &Instance<RelocationRequest>) -> Result<(Sequence, u32), SolverError> {
-        Err(SolverError { msg: "not implemented".to_string() })
-    }
-}
 
-fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: &KServerInstance) {
+fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: &Instance) {
     for (i, _) in instance.initial_positions().iter().enumerate() {
         graph.add_edge(
             Vertex::Source,
@@ -89,14 +87,14 @@ fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: 
     }
 }
 
-fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &KServerInstance) {
+fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &Instance) {
     for (i, x) in instance.requests().iter().enumerate() {
         for (j, y) in instance.initial_positions().iter().enumerate() {
             graph.add_edge(
                 VertexType::InitVertex(j),
                 VertexType::FromVertex(i),
                 Capacity(1),
-                Cost((x.pos - y).abs()),
+                Cost((x.get_request_pos() - y).abs()),
             );
         }
         graph.add_edge(
@@ -109,7 +107,7 @@ fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &KServe
     }
 }
 
-fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &KServerInstance) {
+fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &Instance) {
     for (i, x) in instance.requests().iter().enumerate() {
         for (j, y) in instance.requests().iter().enumerate() {
             if i < j {
@@ -117,7 +115,7 @@ fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &KServerIns
                     VertexType::ToVertex(i),
                     VertexType::FromVertex(j),
                     Capacity(1),
-                    Cost((x.pos - y.pos).abs()),
+                    Cost((x.get_request_pos() - y.get_request_pos()).abs()),
                 );
             }
         }
@@ -139,8 +137,8 @@ fn is_move_edge(v1: &Vertex<VertexType>, v2: &Vertex<VertexType>) -> Option<usiz
     }
 }
 
-fn create_sequence(paths: Vec<mcmf::Path<VertexType>>, instance: &KServerInstance) -> Sequence {
-    let mut seq = Sequence::new_seq(instance.initial_positions().to_vec());
+fn create_scheduleuence(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> Schedule {
+    let mut schedule = Schedule::new_schedule(instance.initial_positions().to_vec());
     let tuples: Vec<(usize, usize)> = paths
         .iter()
         .enumerate()
@@ -154,14 +152,14 @@ fn create_sequence(paths: Vec<mcmf::Path<VertexType>>, instance: &KServerInstanc
     let mut fixed_tuples = order_servers_correctly(tuples, instance);
     fixed_tuples.sort_by_key(|&(_, r)| r);
     for (s, r) in fixed_tuples.iter() {
-        seq.append_move(*s, instance.req(r).pos);
+        schedule.append_move(*s, instance.req(r).get_request_pos());
     }
-    seq
+    schedule
 }
 
 fn order_servers_correctly(
     tuples: Vec<(usize, usize)>,
-    instance: &KServerInstance,
+    instance: &Instance,
 ) -> Vec<(usize, usize)> {
     // (server_id, req_idx, req)
     let mut first_requests: Vec<(usize, usize, i32)> = instance
@@ -170,7 +168,7 @@ fn order_servers_correctly(
         .enumerate()
         .flat_map(|(i, _)| tuples.iter().find(|(s, _)| i == *s))
         .map(|s| *s)
-        .map(|(s, r)| (s, r, instance.req(&r).pos))
+        .map(|(s, r)| (s, r, instance.req(&r).get_request_pos()))
         .collect();
     first_requests.sort_by(|a, b| a.2.cmp(&b.2));
     let mut server_mapping: HashMap<_, _> = (0..instance.k()).enumerate().collect();
@@ -190,21 +188,21 @@ fn order_servers_correctly(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::seq::CostMetric;
+    use crate::schedule::CostMetric;
 
     #[test]
     fn solver_costs_1_works() -> Result<(), Box<dyn Error>> {
-        let instance = KServerInstance::new(vec![78, 77, 30, 8, 15, 58, 37, 19, 11, 7].into(), vec![91, 91]);
+        let instance = Instance::from((vec![78, 77, 30, 8, 15, 58, 37, 19, 11, 7], vec![91, 91]));
         let solution = instance.solve();
-        let (seq, costs) = solution?;
+        let (schedule, costs) = solution?;
         assert_eq!(160, costs);
-        assert_eq!(160, seq.costs());
+        assert_eq!(160, schedule.costs());
         Ok(())
     }
 
     #[test]
     fn solver_order_works() {
-        let instance = KServerInstance::new(vec![40, 60, 50].into(), vec![50, 50]);
+        let instance = Instance::from((vec![40, 60, 50], vec![50, 50]));
         let tuples = vec![(1, 0), (0, 1), (1, 2)];
         assert_eq!(
             vec![(0, 0), (1, 1), (0, 2)],
@@ -214,7 +212,7 @@ mod tests {
 
     #[test]
     fn solver_works() -> Result<(), Box<dyn Error>> {
-        let instance = KServerInstance::new(vec![38, 72, 183, 149, 135, 104].into(), vec![32, 32]);
+        let instance = Instance::from((vec![38, 72, 183, 149, 135, 104], vec![32, 32]));
         let solution = vec![
             vec![32, 32],
             vec![32, 38],

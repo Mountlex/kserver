@@ -1,4 +1,4 @@
-use crate::instance::Instance;
+use crate::instance::*;
 use console::style;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use rand::distributions::{Distribution, Uniform};
@@ -6,6 +6,7 @@ use std::error::Error;
 use std::io::{self, BufRead};
 use std::{fmt, fs, path};
 use structopt::StructOpt;
+use crate::request::*;
 
 #[derive(StructOpt, Debug)]
 pub struct InstanceConfig {
@@ -118,7 +119,7 @@ pub fn load_instances(
         .progress_with(pb)
         .map(|path| load_instance(&path.as_path(), &config))
         .filter_map(Result::ok)
-        .collect();
+        .collect::<Vec<Instance>>();
 
     println!("{}", style("Finished loading!").bold().green());
     if load_config.number_of_instances < 0 {
@@ -140,11 +141,11 @@ fn generate_instance(config: &InstanceConfig) -> Instance {
     let requests: Vec<i32> = dist
         .sample_iter(rng)
         .take(config.number_of_requests)
-        .collect();
+        .collect::<Vec<i32>>();
     let initial_pos: i32 = dist.sample(&mut rng);
 
     let initial_positions: Vec<i32> = vec![initial_pos; config.number_of_servers];
-    Instance::new(requests, initial_positions)
+    Instance::from((requests, initial_positions))
 }
 
 fn load_instance(path: &path::Path, config: &InstanceConfig) -> Result<Instance, Box<dyn Error>> {
@@ -173,8 +174,8 @@ fn load_instance(path: &path::Path, config: &InstanceConfig) -> Result<Instance,
 
     let requests = raw_int_requests
         .iter()
-        .map(|&req| interpolate(req, *min_val, *max_val, config.min_value, config.max_value))
-        .collect::<Vec<i32>>();
+        .map(|&req| interpolate(req, *min_val, *max_val, config.min_value, config.max_value).into())
+        .collect::<Vec<Request>>();
 
     let initial_pos = (config.max_value - config.min_value) / 2;
 

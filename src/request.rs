@@ -1,27 +1,33 @@
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct SimpleRequest {
     pub pos: i32
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct RelocationRequest { 
     pub s: i32, 
     pub t: i32 
 }
 
-pub trait OnTheLine {
-    fn start_pos(&self) -> i32;
+#[derive(Copy, Clone, Debug)]
+pub enum Request {
+    Simple(SimpleRequest),
+    Relocation(RelocationRequest)
 }
 
-impl OnTheLine for SimpleRequest {
-    fn start_pos(&self) -> i32 {
-        self.pos
+impl Request {
+    pub fn get_request_pos(&self) -> i32 {
+        match self {
+            Request::Simple(r) => r.pos,
+            Request::Relocation(r) => r.s,
+        }
     }
 }
-impl OnTheLine for RelocationRequest {
-    fn start_pos(&self) -> i32 {
-        self.s
+
+impl From<i32> for Request {
+    fn from(pos: i32) -> Self {
+        Request::Simple(SimpleRequest { pos: pos })
     }
 }
 
@@ -31,11 +37,18 @@ impl From<i32> for SimpleRequest {
     }
 }
 
+impl From<(i32,i32)> for Request {
+    fn from(relocation: (i32,i32)) -> Self {
+        Request::Relocation(RelocationRequest {s: relocation.0, t: relocation.1 })
+    }
+}
 impl From<(i32,i32)> for RelocationRequest {
     fn from(relocation: (i32,i32)) -> Self {
         RelocationRequest {s: relocation.0, t: relocation.1 }
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {

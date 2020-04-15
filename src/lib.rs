@@ -6,10 +6,11 @@ pub mod instance_generator;
 pub mod pred;
 pub mod pred_generator;
 pub mod sample_generator;
-pub mod seq;
+pub mod schedule;
 pub mod server_config;
 pub mod sim;
 pub mod solver;
 pub mod request;
 
 pub struct Config {}
+

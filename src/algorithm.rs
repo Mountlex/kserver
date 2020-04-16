@@ -4,28 +4,40 @@ use crate::schedule::{Prediction, Schedule, ScheduleCreation};
 use crate::server_config::*;
 use std::cmp::min;
 
-pub fn double_coverage(instance: &Instance) -> Schedule {
+pub fn double_coverage(instance: &Instance) -> (Schedule, u32) {
     let dc = DoubleCoverage;
     return dc.run(instance);
 }
 
-pub fn lambda_dc(instance: &Instance, prediction: &Schedule, lambda: f32) -> Schedule {
-    let alg = LambdaDC::new(prediction.to_vec(), lambda);
+pub fn lambda_dc(instance: &Instance, prediction: &Schedule, lambda: f32) -> (Schedule, u32) {
+    let alg = LambdaDC::new(prediction.to_vec(), lambda); 
     return alg.run(instance);
 }
 
+pub fn biased_dc(instance: &Instance) -> (Schedule, u32) {
+    let bdc = BiasedDC;
+    return bdc.run(instance);
+}
+
+pub fn lambda_biased_dc(instance: &Instance, prediction: &Schedule, lambda: f32) -> (Schedule, u32) {
+    let lbdc = LambdaBiasedDC::new(prediction.to_vec(), lambda);
+    return lbdc.run(instance);
+}
+
 trait Algorithm {
-    fn run(&self, instance: &Instance) -> Schedule {
+    fn run(&self, instance: &Instance) -> (Schedule, u32) {
         let mut schedule = Schedule::new_schedule(instance.initial_positions().to_vec());
+        let mut costs = 0;
 
         for (idx, &req) in instance.requests().into_iter().enumerate() {
             let current = schedule.last().unwrap();
-            let mut next = self.next_move(current, req, idx);
+            let (mut next, cost) = self.next_move(current, req, idx);
+            costs += cost;
             next.sort();
             schedule.append_config(next);
         }
 
-        schedule
+        (schedule, costs)
     }
 
     fn next_move(
@@ -33,23 +45,29 @@ trait Algorithm {
         current: &ServerConfiguration,
         next_request: Request,
         request_index: usize,
-    ) -> ServerConfiguration;
+    ) -> (ServerConfiguration, u32);
 }
 
 trait KTaxiAlgorithm {
-    fn run(&self, instance: &Instance) -> Schedule {
+    fn run(&self, instance: &Instance) -> (Schedule, u32) {
         let mut schedule = Schedule::new_schedule(instance.initial_positions().to_vec());
+        let mut costs: u32 = 0;
 
         let mut active = 0;
-        for &req in instance.requests().into_iter() {
+        for (idx, &req) in instance.requests().into_iter().enumerate() {
             let current = schedule.last().unwrap();
-            let (new_active, mut next) = self.next_move(current, active, req);
+            let (new_active, mut next, cost) = self.next_move(current, active, req, idx);
+            println!("{}", cost);
+            costs += cost;
             active = new_active;
             next.sort();
             schedule.append_config(next);
         }
 
-        schedule
+        if costs > 200000 {
+            println!("Schedule: {:?}", schedule);
+        }
+        (schedule, costs)
     }
 
     fn next_move(
@@ -57,7 +75,8 @@ trait KTaxiAlgorithm {
         current: &ServerConfiguration,
         active: usize,
         next_request: Request,
-    ) -> (usize, ServerConfiguration);
+        req_idx: usize,
+    ) -> (usize, ServerConfiguration, u32);
 }
 
 struct DoubleCoverage;
@@ -68,7 +87,7 @@ impl Algorithm for DoubleCoverage {
         current: &ServerConfiguration,
         req: Request,
         _req_idx: usize,
-    ) -> ServerConfiguration {
+    ) -> (ServerConfiguration, u32) {
         let (left, right) = current.adjacent_servers(req);
         let mut res = current.to_vec();
         let pos = req.get_request_pos();
@@ -83,7 +102,8 @@ impl Algorithm for DoubleCoverage {
             }
             _ => panic!("Should not happened!"),
         }
-        return res;
+        let costs = config_diff(current, &res);
+        return (res, costs);
     }
 }
 
@@ -95,24 +115,34 @@ impl KTaxiAlgorithm for BiasedDC {
         current: &ServerConfiguration,
         active: usize,
         req: Request,
-    ) -> (usize, ServerConfiguration) {
+        req_idx: usize,
+    ) -> (usize, ServerConfiguration, u32) {
         let passive = 1 - active; // other server
         let mut res = current.to_vec();
         let pos = req.get_request_pos();
 
-        let dp = min(2 * (pos - current[active]).abs(), (pos-current[passive]).abs()) as f32;
-        let da = dp / 2.0 as f32;
+        let mut cost:u32 = 0;
+        if res[active] != pos && res[passive] != pos {
+            let dp = min(2 * (pos - current[active]).abs(), (pos-current[passive]).abs()) as f32;
+            let da = dp / 2.0 as f32;
 
-        res[active] += (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
-        res[passive] += (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
-
-        let new_active: usize = res.iter().enumerate().filter(|(_, &p)| p == pos).map(|(i, _)| i).last().unwrap();
+            res[active] += (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
+            res[passive] += (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
+            cost = (da + dp) as u32;
+            println!("biasedDC: da={} dp={}", da, dp);
+        }
+        let new_active;
+        if res[active] == pos {
+            new_active = active;
+        } else {
+            new_active = passive;
+        }
 
         if let Request::Relocation(relocation) = req {
             res[new_active] = relocation.t;
         }
 
-        return (new_active, res);
+        return (new_active, res, cost);
     }
 }
 
@@ -143,7 +173,7 @@ impl Algorithm for LambdaDC {
         current: &ServerConfiguration,
         req: Request,
         req_idx: usize,
-    ) -> ServerConfiguration {
+    ) -> (ServerConfiguration, u32) {
         let pos = req.get_request_pos();
         let (left, right) = current.adjacent_servers(req);
         let mut res = current.to_vec();
@@ -174,7 +204,71 @@ impl Algorithm for LambdaDC {
             }
             _ => panic!("Should not happend!"),
         }
-        return res;
+        let costs = config_diff(current, &res);
+        return (res, costs);
+    }
+}
+
+struct LambdaBiasedDC {
+    prediction: Schedule,
+    lambda: f32,
+}
+
+impl LambdaBiasedDC {
+    fn new(prediction: Schedule, lambda: f32) -> LambdaBiasedDC {
+        LambdaBiasedDC { prediction, lambda }
+    }
+}
+
+impl KTaxiAlgorithm for LambdaBiasedDC {
+    fn next_move(
+        &self,
+        current: &ServerConfiguration,
+        active: usize,
+        req: Request,
+        req_idx: usize,
+    ) -> (usize, ServerConfiguration, u32) {
+        let passive = 1 - active; // other server
+        let mut res = current.to_vec();
+        let pos = req.get_request_pos();
+
+        let mut cost = 0;
+        if res[active] != pos && res[passive] != pos {
+            let predicted = self.prediction.predicted_server(req_idx, req);
+
+            let dp: f32;
+            let da: f32;
+
+            if active == predicted {
+                dp = min((((1.0+self.lambda) * (pos - current[active]).abs() as f32)) as i32, (pos-current[passive]).abs()) as f32;
+                da = dp / (1.0+self.lambda) as f32;
+            } else { // passive == predicted
+                if self.lambda == 0.0 {
+                    dp = (pos-current[passive]).abs() as f32;
+                    da = 0.0;
+                } else {
+                    dp = min((((1.0+1.0/self.lambda) * (pos - current[active]).abs() as f32)) as i32, (pos-current[passive]).abs()) as f32;
+                    da = dp / (1.0+1.0/self.lambda) as f32;
+                }
+            }
+
+            res[active] += (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
+            res[passive] += (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
+            println!("lambdaBiasedDC: da={} dp={}", da, dp);
+            cost = (da + dp) as u32;
+        }
+        let new_active;
+        if res[active] == pos {
+            new_active = active;
+        } else {
+            new_active = passive;
+        }
+
+        if let Request::Relocation(relocation) = req {
+            res[new_active] = relocation.t;
+        }
+
+        return (new_active, res, cost);
     }
 }
 
@@ -196,7 +290,7 @@ mod tests {
                 vec![40, 60],
                 vec![50, 50]
             ],
-            dc.run(&instance)
+            dc.run(&instance).0
         )
     }
 
@@ -219,7 +313,7 @@ mod tests {
                 vec![40, 70],
                 vec![43, 64],
             ],
-            alg.run(&instance)
+            alg.run(&instance).0
         )
     }
 
@@ -242,7 +336,7 @@ mod tests {
                 vec![40, 80],
                 vec![40, 64],
             ],
-            alg.run(&instance)
+            alg.run(&instance).0
         )
     }
 }

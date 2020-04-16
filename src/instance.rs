@@ -4,6 +4,12 @@ use crate::request::*;
 pub struct Instance {
     requests: Vec<Request>,
     initial_positions: Vec<i32>,
+    pub instance_type: InstanceType,
+}
+
+#[derive(Clone, Debug)]
+pub enum InstanceType {
+    KServer, KTaxi
 }
 
 impl Instance {
@@ -11,6 +17,14 @@ impl Instance {
         Instance {
             requests: requests,
             initial_positions: initial_positions,
+            instance_type: InstanceType::KServer,
+        }
+    }    
+    pub fn new_ktaxi(requests: Vec<Request>, initial_positions: Vec<i32>) -> Instance {
+        Instance {
+            requests: requests,
+            initial_positions: initial_positions,
+            instance_type: InstanceType::KTaxi,
         }
     }    
     pub fn length(&self) -> usize {
@@ -41,7 +55,7 @@ impl From<(Vec<i32>, Vec<i32>)> for Instance {
 impl From<(Vec<(i32, i32)>, Vec<i32>)> for Instance {
     fn from(instance: (Vec<(i32, i32)>, Vec<i32>)) -> Instance {
         let requests = instance.0.into_iter().map(|req| req.into()).collect();
-        Instance::new(requests, instance.1)
+        Instance::new_ktaxi(requests, instance.1)
     }
 }
 

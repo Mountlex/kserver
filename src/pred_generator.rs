@@ -27,7 +27,8 @@ impl Sample {
                     Ok(preds) => Ok(KServerSample {
                         predictions: preds,
                         instance: sample.instance,
-                        solution: sample.solution
+                        solution: sample.solution,
+                        opt_cost: sample.opt_cost
                     }.into()),
                     Err(e) => Err(e),
                 },
@@ -35,7 +36,8 @@ impl Sample {
                 Ok(preds) => Ok(KTaxiSample {
                     predictions: preds,
                     instance: sample.instance,
-                        solution: sample.solution
+                    solution: sample.solution,
+                    opt_cost: sample.opt_cost
                 }.into()),
                 Err(e) => Err(e),
             }

@@ -1,6 +1,7 @@
 use crate::instance::*;
 use crate::sample_generator::*;
 use crate::schedule::{Schedule, ScheduleCreation};
+use crate::request::*;
 use mcmf::*;
 use std::collections::HashMap;
 use std::error::Error;
@@ -57,15 +58,25 @@ impl Instance {
         add_request_edges(&mut graph, self);
     
         let (costs, paths) = graph.mcmf();
-        let schedule = create_scheduleuence(paths, self);
-        let fixed_costs = costs as i32 + (-COST_CONST * self.length() as i32);
+        let schedule = create_schedule(paths, self);
+
+        let relocation_costs: i32 = self.requests().iter().filter_map(|req| match *req {
+            Request::Relocation(r) => Some(r),
+            _ => None,
+        }).map(|req| (req.s - req.t).abs()).sum();
+
+        let fixed_costs = costs as i32 + (-COST_CONST * self.length() as i32) - relocation_costs;
     
         return Ok((schedule, fixed_costs as u32));
     }
 
     pub fn build_sample(self: Instance) -> Result<Sample, SolverError> {
-        let (solution, _) = self.solve()?;
-        Ok(KServerSample::new(self, solution).into())
+        let (solution, costs) = self.solve()?;
+        match self.instance_type {
+            InstanceType::KServer => Ok(KServerSample::new(self, solution, costs).into()),
+            InstanceType::KTaxi => Ok(KTaxiSample::new(self, solution, costs).into()),
+        }
+        
     }
 }
 
@@ -111,11 +122,15 @@ fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &Instance) 
     for (i, x) in instance.requests().iter().enumerate() {
         for (j, y) in instance.requests().iter().enumerate() {
             if i < j {
+                let relocated_pos = match x {
+                    Request::Simple(req) => req.pos,
+                    Request::Relocation(req) => req.t
+                };
                 graph.add_edge(
                     VertexType::ToVertex(i),
                     VertexType::FromVertex(j),
                     Capacity(1),
-                    Cost((x.get_request_pos() - y.get_request_pos()).abs()),
+                    Cost((relocated_pos - y.get_request_pos()).abs()),
                 );
             }
         }
@@ -137,7 +152,7 @@ fn is_move_edge(v1: &Vertex<VertexType>, v2: &Vertex<VertexType>) -> Option<usiz
     }
 }
 
-fn create_scheduleuence(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> Schedule {
+fn create_schedule(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> Schedule {
     let mut schedule = Schedule::new_schedule(instance.initial_positions().to_vec());
     let tuples: Vec<(usize, usize)> = paths
         .iter()

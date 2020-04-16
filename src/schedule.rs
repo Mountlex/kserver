@@ -78,17 +78,17 @@ impl ScheduleCreation for Schedule {
     }
 }
 
-pub fn normalize_scheduleuence(schedule: Schedule) -> Result<Schedule, Box<dyn Error>> {
+pub fn normalize_schedule(schedule: Schedule) -> Result<Schedule, Box<dyn Error>> {
     let mut updated = schedule;
     loop {
-        match normalize_scheduleuence_helper(&updated) {
+        match normalize_schedule_helper(&updated) {
             Some(s) => updated = s,
             None => return Ok(updated),
         }
     }
 }
 
-fn normalize_scheduleuence_helper(schedule: &Schedule) -> Option<Schedule> {
+fn normalize_schedule_helper(schedule: &Schedule) -> Option<Schedule> {
     let first_config: ServerConfiguration = match schedule.first() {
         Some(c) => c.to_vec(),
         None => return None,
@@ -174,7 +174,7 @@ mod tests {
         let schedule: Schedule = vec![vec![50, 50], vec![30, 50], vec![30, 20]];
         assert_eq!(
             vec![vec![50, 50], vec![30, 50], vec![20, 50]],
-            normalize_scheduleuence(schedule)?
+            normalize_schedule(schedule)?
         );
 
         Ok(())

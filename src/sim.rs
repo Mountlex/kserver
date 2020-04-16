@@ -1,4 +1,4 @@
-use crate::algorithm::{double_coverage, lambda_dc};
+use crate::algorithm::*;
 use crate::instance::*;
 use crate::sample_generator::*;
 use crate::schedule::CostMetric;
@@ -49,9 +49,19 @@ impl Error for SimulatorError {
 #[derive(Clone, Debug)]
 pub struct KServerResult {
     pub instance: Instance,
-    pub solution: Schedule,
+    pub opt_cost: u32,
     pub eta: u32,
     pub dc_cost: u32,
+    pub alg_cost: u32,
+    pub lambda: f32
+}
+
+#[derive(Clone, Debug)]
+pub struct KTaxiResult {
+    pub instance: Instance,
+    pub opt_cost: u32,
+    pub eta: u32,
+    pub bdc_cost: u32,
     pub alg_cost: u32,
     pub lambda: f32
 }
@@ -65,6 +75,18 @@ impl From<KServerResult> for SimResult {
 impl From<KServerSimArgs> for SimArgs {
     fn from(args: KServerSimArgs) -> SimArgs {
         SimArgs::KServer(args)
+    }
+}
+
+impl From<KTaxiResult> for SimResult {
+    fn from(result: KTaxiResult) -> SimResult {
+        SimResult::KTaxi(result)
+    }
+}
+
+impl From<KTaxiSimArgs> for SimArgs {
+    fn from(args: KTaxiSimArgs) -> SimArgs {
+        SimArgs::KTaxi(args)
     }
 }
 
@@ -85,32 +107,31 @@ pub enum SimArgs {
 
 pub enum SimResult {
     KServer(KServerResult),
-    KTaxi(KServerResult)
+    KTaxi(KTaxiResult)
 }
 
 impl SimResult {
     fn invalid_result(&self) -> bool {
         match self {
             SimResult::KServer(res) => 
-                res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.solution.costs(),
+                res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.opt_cost,
             SimResult::KTaxi(res) => 
-                res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.solution.costs() 
+                (res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.opt_cost) || res.opt_cost > 1000000
         }
     }
 }
 
 impl KServerSample {
     fn simulate(&self, args: KServerSimArgs) -> Result<Vec<SimResult>, SimulatorError> {
-            let dc_cost = double_coverage(&self.instance).costs();
+            let dc_cost = double_coverage(&self.instance).1;
             let results = self.predictions
                 .iter()
                 .map(|pred| {
-                        let alg = lambda_dc(&self.instance, pred, args.lambda);
-                        let alg_cost = alg.costs();
+                        let alg_cost = lambda_dc(&self.instance, pred, args.lambda).1;
                         let eta = pred.diff(&self.solution);
                         let res = KServerResult {
                             instance: self.instance.clone(),
-                            solution: self.solution.to_vec(),
+                            opt_cost: self.opt_cost,
                             eta,
                             dc_cost: dc_cost,
                             alg_cost: alg_cost,
@@ -125,7 +146,24 @@ impl KServerSample {
 
 impl KTaxiSample {
     fn simulate(&self, args: KTaxiSimArgs) -> Result<Vec<SimResult>, SimulatorError> {
-       Err(SimulatorError::new("Not implemented".to_string()))
+        let bdc_cost = biased_dc(&self.instance).1;
+        let results = self.predictions
+            .iter()
+            .map(|pred| {
+                    let alg_cost = lambda_biased_dc(&self.instance, pred, args.lambda).1;
+                    let eta = pred.diff(&self.solution);
+                    let res = KTaxiResult {
+                        instance: self.instance.clone(),
+                        opt_cost: self.opt_cost,
+                        eta,
+                        bdc_cost: bdc_cost,
+                        alg_cost: alg_cost,
+                        lambda: args.lambda,
+                    };
+                    res.into()
+                })
+                .collect::<Vec<SimResult>>();
+        Ok(results)
     }
 }
 
@@ -151,7 +189,7 @@ pub fn run(samples: Vec<Sample>, config: &SimConfig) -> Result<Vec<SimResult>, B
             .collect::<Vec<f32>>(),
     )?;
     println!("{}", style("Simulation finished!").bold().green());
-
+    println!("{} {}", style("Number of results: ").bold().green(), style(results.len()).bold().red());
     Ok(results)
 }
 
@@ -160,16 +198,20 @@ fn simulate_sample(sample: Sample, lambdas: &Vec<f32>) -> Result<Vec<SimResult>,
     let results = lambdas
         .iter()
         .map(|lambda| {
-            sample.simulate(KServerSimArgs {lambda: *lambda}.into())
+            let args = match sample {
+                Sample::KServer(_) => KServerSimArgs {lambda: *lambda}.into(),
+                Sample::KTaxi(_) => KTaxiSimArgs {lambda: *lambda}.into(),
+            };
+            sample.simulate(args)
         })
         .filter_map(Result::ok)
         .flatten()
         .collect::<Vec<SimResult>>();
 
-    if results.iter().any(|res| res.invalid_result()) {
-        return Err(SimulatorError::new("Invalid result".to_string()));
-    }
-    return Ok(results);
+    //if results.iter().any(|res| res.invalid_result()) {
+    //    return Err(SimulatorError::new("Invalid result".to_string()));
+    //}
+    return Ok(results.into_iter().filter(|res| !res.invalid_result()).collect());
 }
 
 fn simulate_samples(

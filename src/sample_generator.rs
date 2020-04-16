@@ -1,6 +1,6 @@
 use crate::instance::*;
 use crate::pred_generator::{run_generate_predictions, PredictionConfig};
-use crate::schedule::{normalize_scheduleuence, Schedule};
+use crate::schedule::{normalize_schedule, Schedule};
 use console::style;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressIterator, ProgressStyle};
 use rayon::prelude::*;
@@ -22,6 +22,7 @@ pub enum Sample {
 pub struct KServerSample {
     pub instance: Instance,
     pub solution: Schedule,
+    pub opt_cost: u32,
     pub predictions: Vec<Schedule>,
 }
 
@@ -29,23 +30,26 @@ pub struct KServerSample {
 pub struct KTaxiSample {
     pub instance: Instance,
     pub solution: Schedule,
+    pub opt_cost: u32,
     pub predictions: Vec<Schedule>,
 }
 
 impl KTaxiSample {
-    pub fn new(instance: Instance, solution: Schedule) -> KTaxiSample {
+    pub fn new(instance: Instance, solution: Schedule, opt_cost: u32) -> KTaxiSample {
         KTaxiSample {
             instance,
             solution,
+            opt_cost,
             predictions: vec![]
         }
     }
 }
 impl KServerSample {
-    pub fn new(instance: Instance, solution: Schedule) -> KServerSample {
+    pub fn new(instance: Instance, solution: Schedule, opt_cost: u32) -> KServerSample {
         KServerSample {
             instance,
             solution,
+            opt_cost,
             predictions: vec![]
         }
     }
@@ -67,14 +71,11 @@ impl From<KTaxiSample> for Sample {
 impl Sample {
     pub fn normalize(self) -> Result<Sample, Box<dyn Error>> {
         match self {
-            Sample::KServer(sample) => match normalize_scheduleuence(sample.solution) {
-                Ok(s) => Ok(KServerSample::new(sample.instance, s).into()),
+            Sample::KServer(sample) => match normalize_schedule(sample.solution) {
+                Ok(s) => Ok(KServerSample::new(sample.instance, s, sample.opt_cost).into()),
                 Err(e) => Err(e),
             },            
-            Sample::KTaxi(sample) => match normalize_scheduleuence(sample.solution) {
-                Ok(s) => Ok(KTaxiSample::new(sample.instance, s).into()),
-                Err(e) => Err(e),
-            },
+            Sample::KTaxi(sample) => Ok(sample.into())
         }
     }
 }

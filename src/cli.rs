@@ -29,9 +29,13 @@ struct KServer {
 
 #[derive(StructOpt, Debug)]
 pub enum Command {
-    /// Sample instances
-    #[structopt(name = "sample_instances")]
-    SampleInstances(instance_generator::InstanceSampleConfig),
+    /// Sample kserver instances
+    #[structopt(name = "kserver_sample")]
+    SampleKServer(instance_generator::KServerInstanceSampleConfig),
+
+    /// Sample ktaxi instances
+    #[structopt(name = "ktaxi_sample")]
+    SampleKTaxi(instance_generator::KTaxiInstanceSampleConfig),
 
     #[structopt(name = "load_instances")]
     LoadInstances(instance_generator::InstanceLoadConfig),
@@ -43,8 +47,11 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     println!("{:?}", cli);
 
     let instances = match cli.cmd {
-        Command::SampleInstances(config) => {
-            instance_generator::generate_instances(&config, &cli.instance_config)?
+        Command::SampleKServer(config) => {
+            instance_generator::generate_kserver_instances(&config, &cli.instance_config)?
+        }        
+        Command::SampleKTaxi(config) => {
+            instance_generator::generate_ktaxi_instances(&config, &cli.instance_config)?
         }
         Command::LoadInstances(config) => {
             instance_generator::load_instances(&config, &cli.instance_config)?

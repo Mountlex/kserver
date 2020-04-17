@@ -1,4 +1,4 @@
-use crate::sim::SimResult;
+use crate::results::SimResult;
 use console::style;
 use csv::Writer;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};

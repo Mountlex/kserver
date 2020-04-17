@@ -1,5 +1,7 @@
 use crate::pred::*;
-use crate::sample_generator::{KServerSample, KTaxiSample, Sample};
+use crate::sample::KServerSample;
+use crate::sample::KTaxiSample;
+use crate::sample::Sample;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::error::Error;

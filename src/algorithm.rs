@@ -442,7 +442,7 @@ mod tests {
         ));
         let alg = BiasedDC;
         let alg_sol = alg.run(&instance);
-        let (opt, opt_cost) = instance.solve()?;
+        let (_opt, opt_cost) = instance.solve()?;
         println!("cost alg = {}", alg_sol.1);
         println!("cost opt = {}", opt_cost);
         assert_eq!(

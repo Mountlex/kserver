@@ -1,6 +1,10 @@
 use crate::algorithm::*;
-use crate::instance::*;
-use crate::sample_generator::*;
+use crate::results::KServerResult;
+use crate::results::KTaxiResult;
+use crate::results::SimResult;
+use crate::sample::KServerSample;
+use crate::sample::KTaxiSample;
+use crate::sample::Sample;
 use console::style;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
@@ -44,41 +48,9 @@ impl Error for SimulatorError {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct KServerResult {
-    pub instance: Instance,
-    pub opt_cost: u32,
-    pub eta: u32,
-    pub dc_cost: u32,
-    pub alg_cost: u32,
-    pub lambda: f32,
-}
-
-#[derive(Clone, Debug)]
-pub struct KTaxiResult {
-    pub instance: Instance,
-    pub opt_cost: u32,
-    pub eta: u32,
-    pub bdc_cost: u32,
-    pub alg_cost: u32,
-    pub lambda: f32,
-}
-
-impl From<KServerResult> for SimResult {
-    fn from(result: KServerResult) -> SimResult {
-        SimResult::KServer(result)
-    }
-}
-
 impl From<KServerSimArgs> for SimArgs {
     fn from(args: KServerSimArgs) -> SimArgs {
         SimArgs::KServer(args)
-    }
-}
-
-impl From<KTaxiResult> for SimResult {
-    fn from(result: KTaxiResult) -> SimResult {
-        SimResult::KTaxi(result)
     }
 }
 
@@ -101,24 +73,6 @@ pub struct KTaxiSimArgs {
 pub enum SimArgs {
     KServer(KServerSimArgs),
     KTaxi(KTaxiSimArgs),
-}
-
-pub enum SimResult {
-    KServer(KServerResult),
-    KTaxi(KTaxiResult),
-}
-
-impl SimResult {
-    fn invalid_result(&self) -> bool {
-        match self {
-            SimResult::KServer(res) => {
-                res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.opt_cost
-            }
-            SimResult::KTaxi(res) => {
-                (res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.opt_cost)
-            }
-        }
-    }
 }
 
 impl KServerSample {
@@ -219,7 +173,7 @@ fn simulate_sample(sample: Sample, lambdas: &Vec<f32>) -> Result<Vec<SimResult>,
         .flatten()
         .collect::<Vec<SimResult>>();
 
-    if results.iter().any(|res| res.invalid_result()) {
+    if results.iter().any(|res| res.is_invalid()) {
         return Err(SimulatorError::new("Invalid result".to_string()));
     }
     //return Ok(results

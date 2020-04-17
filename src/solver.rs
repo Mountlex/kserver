@@ -1,6 +1,6 @@
 use crate::instance::*;
 use crate::request::*;
-use crate::sample_generator::*;
+use crate::sample::*;
 use crate::schedule::{Schedule, ScheduleCreation};
 use mcmf::*;
 use std::collections::HashMap;
@@ -198,13 +198,12 @@ fn order_servers_correctly(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::schedule::CostMetric;
 
     #[test]
     fn solver_costs_1_works() -> Result<(), Box<dyn Error>> {
         let instance = Instance::from((vec![78, 77, 30, 8, 15, 58, 37, 19, 11, 7], vec![91, 91]));
         let solution = instance.solve();
-        let (schedule, costs) = solution?;
+        let (_, costs) = solution?;
         assert_eq!(160, costs);
         Ok(())
     }

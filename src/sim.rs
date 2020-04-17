@@ -116,7 +116,6 @@ impl SimResult {
             }
             SimResult::KTaxi(res) => {
                 (res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.opt_cost)
-                    || res.opt_cost > 100000
             }
         }
     }
@@ -148,7 +147,14 @@ impl KServerSample {
 
 impl KTaxiSample {
     fn simulate(&self, args: KTaxiSimArgs) -> Result<Vec<SimResult>, SimulatorError> {
-        let bdc_cost = biased_dc(&self.instance).1;
+        let bdc = biased_dc(&self.instance);
+        let bdc_cost = bdc.1;
+        if bdc_cost as f32 / self.opt_cost as f32 > 9.0 {
+            println!(
+                "competitive ratio of biasedDC > 9: {}, BiasedDC={:?}, Opt={:?}",
+                self.instance, bdc.0, self.solution
+            );
+        }
         let results = self
             .predictions
             .iter()
@@ -216,7 +222,10 @@ fn simulate_sample(sample: Sample, lambdas: &Vec<f32>) -> Result<Vec<SimResult>,
     if results.iter().any(|res| res.invalid_result()) {
         return Err(SimulatorError::new("Invalid result".to_string()));
     }
-    //return Ok(results.into_iter().filter(|res| !res.invalid_result()).collect());
+    //return Ok(results
+    //    .into_iter()
+    //    .filter(|res| !res.invalid_result())
+    //    .collect());
     return Ok(results);
 }
 
@@ -224,7 +233,8 @@ fn simulate_samples(
     samples: Vec<Sample>,
     lambdas: Vec<f32>,
 ) -> Result<Vec<SimResult>, Box<dyn Error>> {
-    let pb = ProgressBar::new(samples.len() as u64);
+    let number_of_samples = samples.len();
+    let pb = ProgressBar::new(number_of_samples as u64);
 
     pb.set_style(
         ProgressStyle::default_bar()
@@ -237,6 +247,14 @@ fn simulate_samples(
         .map(|sample| simulate_sample(sample, &lambdas))
         .filter_map(Result::ok)
         .collect::<Vec<Vec<SimResult>>>();
+
+    let failed_simulations = number_of_samples * lambdas.len() - results.len();
+
+    println!(
+        "{} {}",
+        style("Samples with invalid simulation: ").bold().green(),
+        style(failed_simulations).bold().red()
+    );
 
     let res = results.into_iter().flatten().collect::<Vec<SimResult>>();
     Ok(res)

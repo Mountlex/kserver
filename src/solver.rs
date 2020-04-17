@@ -57,17 +57,7 @@ impl Instance {
         let (costs, paths) = graph.mcmf();
         let schedule = create_schedule(paths, self);
 
-        let relocation_costs: i32 = self
-            .requests()
-            .iter()
-            .filter_map(|req| match *req {
-                Request::Relocation(r) => Some(r),
-                _ => None,
-            })
-            .map(|req| (req.s - req.t).abs())
-            .sum();
-
-        let fixed_costs = costs as i32 + (-COST_CONST * self.length() as i32) - relocation_costs;
+        let fixed_costs = costs as i32 + (-COST_CONST * self.length() as i32);
         return Ok((schedule, fixed_costs as u32));
     }
 
@@ -216,7 +206,6 @@ mod tests {
         let solution = instance.solve();
         let (schedule, costs) = solution?;
         assert_eq!(160, costs);
-        assert_eq!(160, schedule.costs());
         Ok(())
     }
 

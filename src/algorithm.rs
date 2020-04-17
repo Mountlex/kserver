@@ -313,6 +313,7 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::error::Error;
 
     #[test]
     fn test_double_coverage() {
@@ -431,5 +432,30 @@ mod tests {
             ],
             alg.run(&instance).0
         )
+    }
+
+    #[test]
+    fn test_biased_dc_2() -> Result<(), Box<dyn Error>> {
+        let instance = Instance::from((
+            vec![(38, 38), (101, 101), (136, 50), (51, 33)],
+            vec![10, 10],
+        ));
+        let alg = BiasedDC;
+        let alg_sol = alg.run(&instance);
+        let (opt, opt_cost) = instance.solve()?;
+        println!("cost alg = {}", alg_sol.1);
+        println!("cost opt = {}", opt_cost);
+        assert_eq!(
+            vec![
+                vec![10, 10],
+                vec![24, 38],
+                vec![76, 101],
+                vec![50, 131],
+                vec![33, 129]
+            ],
+            alg_sol.0
+        );
+
+        Ok(())
     }
 }

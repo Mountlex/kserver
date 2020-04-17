@@ -23,24 +23,36 @@ pub struct PredictionConfig {
 impl Sample {
     fn add_predictions(self, config: &PredictionConfig) -> Result<Sample, PredictionError> {
         match self {
-            Sample::KServer(sample) => match generate_predictions(&sample.instance, &sample.solution, config) {
-                    Ok(preds) => Ok(KServerSample {
-                        predictions: preds,
-                        instance: sample.instance,
-                        solution: sample.solution,
-                        opt_cost: sample.opt_cost
-                    }.into()),
-                    Err(e) => Err(e),
-                },
-            Sample::KTaxi(sample) => match generate_predictions(&sample.instance, &sample.solution, config) {
+            Sample::KServer(sample) => match generate_predictions(
+                &sample.instance,
+                &sample.solution,
+                sample.opt_cost,
+                config,
+            ) {
+                Ok(preds) => Ok(KServerSample {
+                    predictions: preds,
+                    instance: sample.instance,
+                    solution: sample.solution,
+                    opt_cost: sample.opt_cost,
+                }
+                .into()),
+                Err(e) => Err(e),
+            },
+            Sample::KTaxi(sample) => match generate_predictions(
+                &sample.instance,
+                &sample.solution,
+                sample.opt_cost,
+                config,
+            ) {
                 Ok(preds) => Ok(KTaxiSample {
                     predictions: preds,
                     instance: sample.instance,
                     solution: sample.solution,
-                    opt_cost: sample.opt_cost
-                }.into()),
+                    opt_cost: sample.opt_cost,
+                }
+                .into()),
                 Err(e) => Err(e),
-            }
+            },
         }
     }
 }

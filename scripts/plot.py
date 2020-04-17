@@ -5,8 +5,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def create_arg_parser():
-    parser = argparse.ArgumentParser(description='Plot results from kserver simulation')
+    parser = argparse.ArgumentParser(
+        description='Plot results from kserver simulation')
     parser.add_argument('sampleFile')
     parser.add_argument('--bin_size', default=0.25)
     return parser
@@ -19,8 +21,10 @@ def get_data(filename):
     data['CRdc'] = data['DcCost'] / data['OptCost']
     return data
 
+
 def plot_lambda(df, eta_res):
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res)
+    #df = df[df['Bin'] < 10]
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
     dfDC = df.loc[:, ['Lmbda', 'CRdc']]
     ax = dfAlg.groupby(
@@ -57,5 +61,3 @@ if __name__ == "__main__":
         plt.show()
     else:
         print("Path not valid!")
-
-

@@ -28,19 +28,10 @@ impl Prediction for Schedule {
 }*/
 
 pub trait CostMetric {
-    fn costs(&self) -> u32;
     fn diff(&self, other: &Self) -> u32;
 }
 
 impl CostMetric for Schedule {
-    fn costs(&self) -> u32 {
-        return self
-            .iter()
-            .zip(self.iter().skip(1))
-            .map(|(c1, c2)| config_diff(c1, c2))
-            .sum();
-    }
-
     fn diff(&self, other: &Self) -> u32 {
         if self.len() != other.len() {
             panic!("Schedules must have same size!")
@@ -162,14 +153,6 @@ mod tests {
         let mut schedule = Schedule::new_schedule(vec![10, 20]);
         schedule.append_move(1, 30);
         assert_eq!(0, config_diff(&schedule.last().unwrap(), &vec![10, 30]));
-    }
-    #[test]
-    fn costs_works() {
-        let mut schedule = Schedule::new_schedule(vec![10, 20]);
-        schedule.append_move(1, 30);
-        schedule.append_move(0, 15);
-        schedule.append_move(1, 20);
-        assert_eq!(25, schedule.costs());
     }
 
     #[test]

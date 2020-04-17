@@ -112,6 +112,7 @@ pub fn to_prediction(schedule: &Schedule, instance: &Instance) -> Prediction {
 pub fn generate_predictions(
     instance: &Instance,
     solution: &Schedule,
+    opt_cost: u32,
     config: &PredictionConfig,
 ) -> Result<Vec<Prediction>, PredictionError> {
     let mut step_to_predictions: Vec<Vec<Prediction>> =
@@ -159,7 +160,7 @@ pub fn generate_predictions(
             let pred = Prediction::from(pred_vec);
             let pred_schedule = pred.to_schedule(instance);
             let eta = solution.diff(&pred_schedule);
-            let ratio = eta as f32 / solution.costs() as f32;
+            let ratio = eta as f32 / opt_cost as f32;
             let bin_index: usize = (ratio / config.step_size).ceil() as usize;
 
             if bin_index < config.number_of_predictions

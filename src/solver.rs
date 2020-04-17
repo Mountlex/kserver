@@ -1,7 +1,7 @@
 use crate::instance::*;
+use crate::request::*;
 use crate::sample_generator::*;
 use crate::schedule::{Schedule, ScheduleCreation};
-use crate::request::*;
 use mcmf::*;
 use std::collections::HashMap;
 use std::error::Error;
@@ -48,25 +48,26 @@ impl SolverError {
 
 const COST_CONST: i32 = -100000;
 
-
-
 impl Instance {
     pub fn solve(self: &Instance) -> Result<(Schedule, u32), SolverError> {
         let mut graph = GraphBuilder::new();
         add_source_and_init_vertices(&mut graph, self);
         add_request_verticies(&mut graph, self);
         add_request_edges(&mut graph, self);
-    
         let (costs, paths) = graph.mcmf();
         let schedule = create_schedule(paths, self);
 
-        let relocation_costs: i32 = self.requests().iter().filter_map(|req| match *req {
-            Request::Relocation(r) => Some(r),
-            _ => None,
-        }).map(|req| (req.s - req.t).abs()).sum();
+        let relocation_costs: i32 = self
+            .requests()
+            .iter()
+            .filter_map(|req| match *req {
+                Request::Relocation(r) => Some(r),
+                _ => None,
+            })
+            .map(|req| (req.s - req.t).abs())
+            .sum();
 
         let fixed_costs = costs as i32 + (-COST_CONST * self.length() as i32) - relocation_costs;
-    
         return Ok((schedule, fixed_costs as u32));
     }
 
@@ -76,10 +77,8 @@ impl Instance {
             InstanceType::KServer => Ok(KServerSample::new(self, solution, costs).into()),
             InstanceType::KTaxi => Ok(KTaxiSample::new(self, solution, costs).into()),
         }
-        
     }
 }
-
 
 fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: &Instance) {
     for (i, _) in instance.initial_positions().iter().enumerate() {
@@ -124,7 +123,7 @@ fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &Instance) 
             if i < j {
                 let relocated_pos = match x {
                     Request::Simple(req) => req.pos,
-                    Request::Relocation(req) => req.t
+                    Request::Relocation(req) => req.t,
                 };
                 graph.add_edge(
                     VertexType::ToVertex(i),
@@ -167,7 +166,13 @@ fn create_schedule(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> S
     let mut fixed_tuples = order_servers_correctly(tuples, instance);
     fixed_tuples.sort_by_key(|&(_, r)| r);
     for (s, r) in fixed_tuples.iter() {
-        schedule.append_move(*s, instance.req(r).get_request_pos());
+        schedule.append_move(
+            *s,
+            match instance.req(r) {
+                Request::Relocation(request) => request.t,
+                Request::Simple(request) => request.pos,
+            },
+        );
     }
     schedule
 }

@@ -2,11 +2,11 @@ use crate::server_config::config_diff;
 use crate::server_config::is_normalized;
 use crate::server_config::ServerConfig;
 use crate::server_config::ServerConfiguration;
-use crate::request::Request;
 use std::error::Error;
 
 pub type Schedule = Vec<ServerConfiguration>;
 
+/*
 pub trait Prediction {
     fn predicted_server(&self, idx: usize, req: Request) -> usize;
 }
@@ -17,12 +17,15 @@ impl Prediction for Schedule {
             self[idx + 1]
                 .iter()
                 .enumerate()
-                .find(|(_, &server)| server == req.get_request_pos())
+                .find(|(_, &server)| match req {
+                    Request::Simple(r) => server == r.pos,
+                    Request::Relocation(r) => server == r.t,
+                })
                 .map(|(i, _)| i)
                 .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!"))
         })
     }
-}
+}*/
 
 pub trait CostMetric {
     fn costs(&self) -> u32;

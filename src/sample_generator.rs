@@ -1,4 +1,5 @@
 use crate::instance::*;
+use crate::pred::Prediction;
 use crate::pred_generator::{run_generate_predictions, PredictionConfig};
 use crate::schedule::{normalize_schedule, Schedule};
 use console::style;
@@ -23,7 +24,7 @@ pub struct KServerSample {
     pub instance: Instance,
     pub solution: Schedule,
     pub opt_cost: u32,
-    pub predictions: Vec<Schedule>,
+    pub predictions: Vec<Prediction>,
 }
 
 #[derive(Clone)]
@@ -31,7 +32,7 @@ pub struct KTaxiSample {
     pub instance: Instance,
     pub solution: Schedule,
     pub opt_cost: u32,
-    pub predictions: Vec<Schedule>,
+    pub predictions: Vec<Prediction>,
 }
 
 impl KTaxiSample {
@@ -40,7 +41,7 @@ impl KTaxiSample {
             instance,
             solution,
             opt_cost,
-            predictions: vec![]
+            predictions: vec![],
         }
     }
 }
@@ -50,7 +51,7 @@ impl KServerSample {
             instance,
             solution,
             opt_cost,
-            predictions: vec![]
+            predictions: vec![],
         }
     }
 }
@@ -67,19 +68,17 @@ impl From<KTaxiSample> for Sample {
     }
 }
 
-
 impl Sample {
     pub fn normalize(self) -> Result<Sample, Box<dyn Error>> {
         match self {
             Sample::KServer(sample) => match normalize_schedule(sample.solution) {
                 Ok(s) => Ok(KServerSample::new(sample.instance, s, sample.opt_cost).into()),
                 Err(e) => Err(e),
-            },            
-            Sample::KTaxi(sample) => Ok(sample.into())
+            },
+            Sample::KTaxi(sample) => Ok(sample.into()),
         }
     }
 }
-
 
 pub fn run(instances: Vec<Instance>, config: &SampleConfig) -> Result<Vec<Sample>, Box<dyn Error>> {
     println!("{}", style("Start generating samples...").bold().cyan());

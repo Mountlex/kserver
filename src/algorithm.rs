@@ -1,16 +1,29 @@
 use crate::instance::Instance;
+use crate::pred::Prediction;
 use crate::request::*;
-use crate::schedule::{Prediction, Schedule, ScheduleCreation};
+use crate::schedule::{Schedule, ScheduleCreation};
 use crate::server_config::*;
 use std::cmp::min;
+
+macro_rules! min {
+    ($x: expr) => ($x);
+    ($x: expr, $($z: expr),+) => {{
+        let y = min!($($z),*);
+        if $x < y {
+            $x
+        } else {
+            y
+        }
+    }}
+}
 
 pub fn double_coverage(instance: &Instance) -> (Schedule, u32) {
     let dc = DoubleCoverage;
     return dc.run(instance);
 }
 
-pub fn lambda_dc(instance: &Instance, prediction: &Schedule, lambda: f32) -> (Schedule, u32) {
-    let alg = LambdaDC::new(prediction.to_vec(), lambda); 
+pub fn lambda_dc(instance: &Instance, prediction: &Prediction, lambda: f32) -> (Schedule, u32) {
+    let alg = LambdaDC::new(prediction.clone(), lambda);
     return alg.run(instance);
 }
 
@@ -19,8 +32,12 @@ pub fn biased_dc(instance: &Instance) -> (Schedule, u32) {
     return bdc.run(instance);
 }
 
-pub fn lambda_biased_dc(instance: &Instance, prediction: &Schedule, lambda: f32) -> (Schedule, u32) {
-    let lbdc = LambdaBiasedDC::new(prediction.to_vec(), lambda);
+pub fn lambda_biased_dc(
+    instance: &Instance,
+    prediction: &Prediction,
+    lambda: f32,
+) -> (Schedule, u32) {
+    let lbdc = LambdaBiasedDC::new(prediction.clone(), lambda);
     return lbdc.run(instance);
 }
 
@@ -57,10 +74,13 @@ trait KTaxiAlgorithm {
         for (idx, &req) in instance.requests().into_iter().enumerate() {
             let current = schedule.last().unwrap();
             let (new_active, mut next, cost) = self.next_move(current, active, req, idx);
-            println!("{}", cost);
+            //println!("{}", cost);
             costs += cost;
             active = new_active;
-            next.sort();
+            if next[0] > next[1] {
+                active = 1 - active;
+                next.sort();
+            }
             schedule.append_config(next);
         }
 
@@ -115,21 +135,26 @@ impl KTaxiAlgorithm for BiasedDC {
         current: &ServerConfiguration,
         active: usize,
         req: Request,
-        req_idx: usize,
+        _req_idx: usize,
     ) -> (usize, ServerConfiguration, u32) {
         let passive = 1 - active; // other server
         let mut res = current.to_vec();
         let pos = req.get_request_pos();
 
-        let mut cost:u32 = 0;
+        let mut cost: u32 = 0;
         if res[active] != pos && res[passive] != pos {
-            let dp = min(2 * (pos - current[active]).abs(), (pos-current[passive]).abs()) as f32;
+            let dp = min!(
+                2.0 * (pos - current[active]).abs() as f32,
+                (pos - current[passive]).abs() as f32
+            );
             let da = dp / 2.0 as f32;
 
-            res[active] += (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
-            res[passive] += (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
+            res[active] +=
+                (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
+            res[passive] +=
+                (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
             cost = (da + dp) as u32;
-            println!("biasedDC: da={} dp={}", da, dp);
+            //println!("biasedDC: da={} dp={}", da, dp);
         }
         let new_active;
         if res[active] == pos {
@@ -147,12 +172,12 @@ impl KTaxiAlgorithm for BiasedDC {
 }
 
 struct LambdaDC {
-    prediction: Schedule,
+    prediction: Prediction,
     lambda: f32,
 }
 
 impl LambdaDC {
-    fn new(prediction: Schedule, lambda: f32) -> LambdaDC {
+    fn new(prediction: Prediction, lambda: f32) -> LambdaDC {
         LambdaDC { prediction, lambda }
     }
 
@@ -182,7 +207,7 @@ impl Algorithm for LambdaDC {
                 if i == j {
                     res[i] = pos;
                 } else {
-                    let predicted = self.prediction.predicted_server(req_idx, req);
+                    let predicted = self.prediction.get_predicted_server(req_idx);
                     if self.lambda == 0.0 {
                         res[predicted] = pos;
                     } else {
@@ -210,12 +235,12 @@ impl Algorithm for LambdaDC {
 }
 
 struct LambdaBiasedDC {
-    prediction: Schedule,
+    prediction: Prediction,
     lambda: f32,
 }
 
 impl LambdaBiasedDC {
-    fn new(prediction: Schedule, lambda: f32) -> LambdaBiasedDC {
+    fn new(prediction: Prediction, lambda: f32) -> LambdaBiasedDC {
         LambdaBiasedDC { prediction, lambda }
     }
 }
@@ -234,28 +259,41 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
 
         let mut cost = 0;
         if res[active] != pos && res[passive] != pos {
-            let predicted = self.prediction.predicted_server(req_idx, req);
+            let predicted = self.prediction.get_predicted_server(req_idx);
 
             let dp: f32;
             let da: f32;
 
+            //println!("active={}, predicted={}", active, predicted);
+
             if active == predicted {
-                dp = min((((1.0+self.lambda) * (pos - current[active]).abs() as f32)) as i32, (pos-current[passive]).abs()) as f32;
-                da = dp / (1.0+self.lambda) as f32;
-            } else { // passive == predicted
+                dp = min!(
+                    (1.0 + self.lambda) * ((pos - current[active]).abs() as f32),
+                    (pos - current[passive]).abs() as f32
+                );
+                da = dp / (1.0 + self.lambda) as f32;
+            } else {
+                // passive == predicted
                 if self.lambda == 0.0 {
-                    dp = (pos-current[passive]).abs() as f32;
+                    dp = (pos - current[passive]).abs() as f32;
                     da = 0.0;
                 } else {
-                    dp = min((((1.0+1.0/self.lambda) * (pos - current[active]).abs() as f32)) as i32, (pos-current[passive]).abs()) as f32;
-                    da = dp / (1.0+1.0/self.lambda) as f32;
+                    dp = min!(
+                        (1.0 + (1.0 / self.lambda)) * ((pos - current[active]).abs() as f32),
+                        (pos - current[passive]).abs() as f32
+                    );
+                    da = dp / (1.0 + (1.0 / self.lambda)) as f32;
                 }
             }
 
-            res[active] += (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
-            res[passive] += (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
-            println!("lambdaBiasedDC: da={} dp={}", da, dp);
+            res[active] +=
+                (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
+            res[passive] +=
+                (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
+            //println!("lambdaBiasedDC: da={} dp={}", da, dp);
             cost = (da + dp) as u32;
+        } else {
+            //println!("Taxi already on request");
         }
         let new_active;
         if res[active] == pos {
@@ -297,13 +335,7 @@ mod tests {
     #[test]
     fn test_lambda_dc_coverage() {
         let instance = Instance::from((vec![20, 80, 40, 64], vec![50, 50]));
-        let pred = vec![
-            vec![50, 50],
-            vec![20, 50],
-            vec![20, 80],
-            vec![40, 80],
-            vec![40, 64],
-        ];
+        let pred = Prediction::from(vec![0, 1, 0, 1]);
         let alg = LambdaDC::new(pred, 0.5);
         assert_eq!(
             vec![
@@ -320,13 +352,7 @@ mod tests {
     #[test]
     fn test_lambda_dc_coverage_lambda_zero() {
         let instance = Instance::from((vec![20, 80, 40, 64], vec![50, 50]));
-        let pred = vec![
-            vec![50, 50],
-            vec![20, 50],
-            vec![20, 80],
-            vec![40, 80],
-            vec![40, 64],
-        ];
+        let pred = Prediction::from(vec![0, 1, 0, 1]);
         let alg = LambdaDC::new(pred, 0.0);
         assert_eq!(
             vec![
@@ -335,6 +361,73 @@ mod tests {
                 vec![20, 80],
                 vec![40, 80],
                 vec![40, 64],
+            ],
+            alg.run(&instance).0
+        )
+    }
+
+    #[test]
+    fn test_biased_dc() {
+        let instance = Instance::from((vec![(0, 0), (10, 0), (30, 30), (0, 0)], vec![0, 30]));
+        let alg = BiasedDC;
+        assert_eq!(
+            vec![
+                vec![0, 30],
+                vec![0, 30],
+                vec![0, 10],
+                vec![10, 30],
+                vec![0, 25],
+            ],
+            alg.run(&instance).0
+        )
+    }
+
+    #[test]
+    fn test_lambda_biased_dc_1() {
+        let instance = Instance::from((vec![(0, 0), (10, 0), (30, 30), (0, 0)], vec![0, 30]));
+        let pred = Prediction::from(vec![0, 0, 1, 0]);
+        let alg = LambdaBiasedDC::new(pred, 1.0);
+        assert_eq!(
+            vec![
+                vec![0, 30],
+                vec![0, 30],
+                vec![0, 10],
+                vec![10, 30],
+                vec![0, 25],
+            ],
+            alg.run(&instance).0
+        )
+    }
+
+    #[test]
+    fn test_lambda_biased_dc_2() {
+        let instance = Instance::from((vec![(0, 0), (10, 0), (30, 30), (0, 0)], vec![0, 30]));
+        let pred = Prediction::from(vec![0, 0, 1, 0]);
+        let alg = LambdaBiasedDC::new(pred, 0.0);
+        assert_eq!(
+            vec![
+                vec![0, 30],
+                vec![0, 30],
+                vec![0, 20],
+                vec![0, 30],
+                vec![0, 30],
+            ],
+            alg.run(&instance).0
+        )
+    }
+
+    #[test]
+    fn test_lambda_biased_dc_3() {
+        let instance = Instance::from((vec![(0, 0), (10, 0), (30, 30), (0, 0)], vec![0, 30]));
+        let pred = Prediction::from(vec![0, 0, 1, 0]);
+        let alg = LambdaBiasedDC::new(pred, 0.5);
+        assert_eq!(
+            vec![
+                vec![0, 30],
+                vec![0, 30],
+                vec![0, 15],
+                vec![5, 30],
+                vec![0, 29],
             ],
             alg.run(&instance).0
         )

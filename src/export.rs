@@ -1,4 +1,3 @@
-use crate::schedule::CostMetric;
 use crate::sim::SimResult;
 use console::style;
 use csv::Writer;
@@ -44,7 +43,7 @@ impl Record {
                     panic!("This should not happen!")
                 }
                 return rec;
-            },
+            }
             SimResult::KTaxi(res) => {
                 let rec = Record {
                     numberOfServers: res.instance.k() as u64,
@@ -59,7 +58,7 @@ impl Record {
                     panic!("This should not happen!")
                 }
                 return rec;
-            },
+            }
         }
     }
 }

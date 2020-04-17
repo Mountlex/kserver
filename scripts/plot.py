@@ -50,6 +50,7 @@ if __name__ == "__main__":
     arg_parser = create_arg_parser()
     parsed_args = arg_parser.parse_args(sys.argv[1:])
     if os.path.exists(parsed_args.sampleFile):
+        print(parsed_args.bin_size)
         data = get_data(parsed_args.sampleFile)
         plot_eta(data, parsed_args.bin_size)
         plot_lambda(data, parsed_args.bin_size)

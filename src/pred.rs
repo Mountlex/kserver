@@ -1,11 +1,12 @@
 use crate::instance::Instance;
 use crate::pred_generator::PredictionConfig;
-use crate::schedule::{CostMetric, Schedule, ScheduleCreation};
-use crate::server_config::ServerConfig;
+use crate::request::Request;
+use crate::schedule::{CostMetric, Schedule};
 use rand::distributions::{Distribution, Uniform};
 use rand::seq::SliceRandom;
 use std::error::Error;
 use std::fmt;
+use std::iter::FromIterator;
 
 #[derive(Debug, Clone)]
 pub struct PredictionError {
@@ -38,15 +39,87 @@ impl PredictionError {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct Prediction(Vec<usize>);
+
+impl From<Vec<usize>> for Prediction {
+    fn from(servers: Vec<usize>) -> Prediction {
+        Prediction(servers)
+    }
+}
+
+impl FromIterator<usize> for Prediction {
+    fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
+        Prediction(iter.into_iter().collect())
+    }
+}
+
+impl IntoIterator for Prediction {
+    type Item = usize;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl Prediction {
+    fn to_schedule(&self, instance: &Instance) -> Schedule {
+        let mut schedule = vec![instance.initial_positions().to_vec()];
+
+        for (idx, req) in instance.requests().iter().enumerate() {
+            let mut last = schedule.last().unwrap().to_vec();
+            last[self.0[idx]] = match req {
+                Request::Simple(r) => r.pos,
+                Request::Relocation(r) => r.t,
+            };
+            schedule.push(last);
+        }
+
+        schedule
+    }
+
+    pub fn get_eta(&self, solution: &Schedule, instance: &Instance) -> u32 {
+        let pred_schedule = self.to_schedule(instance);
+        return solution.diff(&pred_schedule);
+    }
+
+    pub fn get_predicted_server(&self, request_index: usize) -> usize {
+        return self.0[request_index];
+    }
+}
+
+// TODO
+pub fn to_prediction(schedule: &Schedule, instance: &Instance) -> Prediction {
+    schedule
+        .iter()
+        .skip(1)
+        .enumerate()
+        .map(|(idx, config)| {
+            config
+                .iter()
+                .enumerate()
+                .find(|(_, &server)| match instance.requests()[idx] {
+                    Request::Simple(r) => server == r.pos,
+                    Request::Relocation(r) => server == r.t,
+                })
+                .map(|(i, _)| i)
+                .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!\nSolution={:?} Instance={}", schedule, instance))
+        })
+        .collect::<Prediction>()
+}
+
 pub fn generate_predictions(
     instance: &Instance,
     solution: &Schedule,
     config: &PredictionConfig,
-) -> Result<Vec<Schedule>, PredictionError> {
-    let mut step_to_predictions: Vec<Vec<Schedule>> =
+) -> Result<Vec<Prediction>, PredictionError> {
+    let mut step_to_predictions: Vec<Vec<Prediction>> =
         vec![vec![]; config.number_of_predictions as usize];
 
-    step_to_predictions[0].push(solution.to_vec());
+    let perfect_prediction = to_prediction(solution, instance);
+    let ref_perfect_prediction = &to_prediction(solution, instance);
+    step_to_predictions[0].push(perfect_prediction);
 
     let mut rng = rand::thread_rng();
     let dist = Uniform::from(0..instance.length());
@@ -56,33 +129,36 @@ pub fn generate_predictions(
             let mut correct_preds = vec![true; instance.length()];
             (1..number_of_wrong_servers).for_each(|_| correct_preds[dist.sample(&mut rng)] = false);
 
-            let mut pred = Schedule::new_schedule(instance.initial_positions().to_vec());
-            for (i, (last, config)) in solution.iter().zip(solution.iter().skip(1)).enumerate() {
+            let mut pred_vec = vec![];
+            for (i, &server) in ref_perfect_prediction.0.iter().enumerate() {
                 if correct_preds[i] {
-                    pred.append_config(config.to_vec());
+                    pred_vec.push(server);
                 } else {
-                    match last.moved_server(config) {
-                        Some(server) => {
-                            if rand::random() {
-                                if server > 0 {
-                                    pred.append_move(server - 1, instance.requests()[i].get_request_pos());
-                                } else {
-                                    pred.append_move(server + 1, instance.requests()[i].get_request_pos());
-                                }
-                            } else {
-                                if server < instance.k() - 1 {
-                                    pred.append_move(server + 1, instance.requests()[i].get_request_pos());
-                                } else {
-                                    pred.append_move(server - 1, instance.requests()[i].get_request_pos());
-                                }
-                            }
+                    if rand::random() {
+                        // left
+                        if server > 0 {
+                            //left
+                            pred_vec.push(server - 1);
+                        } else {
+                            //right
+                            pred_vec.push(server + 1);
                         }
-                        None => pred.append_config(config.to_vec()),
+                    } else {
+                        // right
+                        if server < instance.k() - 1 {
+                            // right
+                            pred_vec.push(server + 1);
+                        } else {
+                            // left
+                            pred_vec.push(server - 1);
+                        }
                     }
                 }
             }
 
-            let eta = solution.diff(&pred);
+            let pred = Prediction::from(pred_vec);
+            let pred_schedule = pred.to_schedule(instance);
+            let eta = solution.diff(&pred_schedule);
             let ratio = eta as f32 / solution.costs() as f32;
             let bin_index: usize = (ratio / config.step_size).ceil() as usize;
 
@@ -124,7 +200,7 @@ pub fn generate_predictions(
     } else {
         Ok(step_to_predictions
             .into_iter()
-            .map(|preds| preds.choose(&mut rng).unwrap().to_vec())
+            .map(|preds| preds.choose(&mut rng).unwrap().clone())
             .collect())
     }
 }

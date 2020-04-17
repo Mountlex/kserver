@@ -9,7 +9,8 @@ pub struct Instance {
 
 #[derive(Clone, Debug)]
 pub enum InstanceType {
-    KServer, KTaxi
+    KServer,
+    KTaxi,
 }
 
 impl Instance {
@@ -19,14 +20,14 @@ impl Instance {
             initial_positions: initial_positions,
             instance_type: InstanceType::KServer,
         }
-    }    
+    }
     pub fn new_ktaxi(requests: Vec<Request>, initial_positions: Vec<i32>) -> Instance {
         Instance {
             requests: requests,
             initial_positions: initial_positions,
             instance_type: InstanceType::KTaxi,
         }
-    }    
+    }
     pub fn length(&self) -> usize {
         self.requests.len()
     }
@@ -44,6 +45,18 @@ impl Instance {
     }
 }
 
+impl std::fmt::Display for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "Instance: ({:?}) [{}]",
+            self.initial_positions,
+            self.requests
+                .iter()
+                .fold(String::new(), |acc, &num| acc + &num.to_string() + ", ")
+        )
+    }
+}
 
 impl From<(Vec<i32>, Vec<i32>)> for Instance {
     fn from(instance: (Vec<i32>, Vec<i32>)) -> Instance {

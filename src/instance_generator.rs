@@ -1,4 +1,5 @@
 use crate::instance::*;
+use crate::request::*;
 use console::style;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use rand::distributions::{Distribution, Uniform};
@@ -7,7 +8,6 @@ use std::error::Error;
 use std::io::{self, BufRead};
 use std::{fmt, fs, path};
 use structopt::StructOpt;
-use crate::request::*;
 
 #[derive(StructOpt, Debug)]
 pub struct InstanceConfig {
@@ -27,7 +27,6 @@ pub struct InstanceConfig {
 pub struct KServerInstanceSampleConfig {
     pub number_of_instances: usize,
 }
-
 
 #[derive(StructOpt, Debug)]
 pub struct KTaxiInstanceSampleConfig {
@@ -78,7 +77,10 @@ pub fn generate_kserver_instances(
     sample_config: &KServerInstanceSampleConfig,
     config: &InstanceConfig,
 ) -> Result<Vec<Instance>, Box<dyn Error>> {
-    println!("{}", style("Start generating kserver instances...").bold().cyan());
+    println!(
+        "{}",
+        style("Start generating kserver instances...").bold().cyan()
+    );
     let number_of_instances = sample_config.number_of_instances;
     let pb = ProgressBar::new(number_of_instances as u64);
     pb.set_style(
@@ -98,7 +100,10 @@ pub fn generate_ktaxi_instances(
     sample_config: &KTaxiInstanceSampleConfig,
     config: &InstanceConfig,
 ) -> Result<Vec<Instance>, Box<dyn Error>> {
-    println!("{}", style("Start generating kserver instances...").bold().cyan());
+    println!(
+        "{}",
+        style("Start generating kserver instances...").bold().cyan()
+    );
     let number_of_instances = sample_config.number_of_instances;
     let pb = ProgressBar::new(number_of_instances as u64);
     pb.set_style(
@@ -176,18 +181,21 @@ fn generate_kserver_instance(config: &InstanceConfig) -> Instance {
     Instance::from((requests, initial_positions))
 }
 
-fn generate_ktaxi_instance(config: &InstanceConfig, sample_config: &KTaxiInstanceSampleConfig) -> Instance {
+fn generate_ktaxi_instance(
+    config: &InstanceConfig,
+    sample_config: &KTaxiInstanceSampleConfig,
+) -> Instance {
     let mut rng = rand::thread_rng();
     let dist = Uniform::from(config.min_value..config.max_value);
 
-    let mut requests: Vec<(i32,i32)> = vec![];
-    for idx in 0..config.number_of_requests {
+    let mut requests: Vec<(i32, i32)> = vec![];
+    for _idx in 0..config.number_of_requests {
         let s = dist.sample(&mut rng);
         if rng.gen::<f32>() < sample_config.percentage_of_relocations {
             let t = dist.sample(&mut rng);
-            requests.push((s,t));
+            requests.push((s, t));
         } else {
-            requests.push((s,s));
+            requests.push((s, s));
         }
     }
     let initial_pos: i32 = dist.sample(&mut rng);

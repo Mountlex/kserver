@@ -129,7 +129,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn scheduleuence_diff_works() {
+    fn schedule_diff_works() {
         let conf11 = vec![10, 15, 25];
         let conf12 = vec![8, 17, 20];
         let conf21 = vec![10, 15, 25];
@@ -142,7 +142,7 @@ mod tests {
     }
     #[test]
     #[should_panic]
-    fn scheduleuence_diff_panics() {
+    fn schedule_diff_panics() {
         let mut schedule1 = Schedule::new_schedule(vec![10]);
         schedule1.append_config(vec![10]);
         let schedule2 = Schedule::new_schedule(vec![10]);

@@ -6,11 +6,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+PLOT_MEAN = 0
+PLOT_MAX = 1
+
+
 def create_arg_parser():
     parser = argparse.ArgumentParser(
         description='Plot results from kserver simulation')
     parser.add_argument('sampleFile')
     parser.add_argument('--bin_size', default=0.25)
+    parser.add_argument('--max', action='store_const',
+                        const=1, default=0, dest='mode')
     return parser
 
 
@@ -22,18 +28,36 @@ def get_data(filename):
     return data
 
 
-def plot_lambda(df, eta_res):
+def cons(x):
+    return 1+x
+
+
+def robust(x):
+    return 1 + 1/x
+
+
+def plot_lambda(df, eta_res, mode):
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res)
-    #df = df[df['Bin'] < 10]
+    # df = df[df['Bin'] < 10]
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
     dfDC = df.loc[:, ['Lmbda', 'CRdc']]
-    ax = dfAlg.groupby(
-        ['Bin', 'Lmbda']).mean().unstack('Bin').plot(style='b--', legend=False)
-    dfDC.groupby(['Lmbda']).mean().plot(ax=ax)
+    if mode == PLOT_MAX:
+        ax = dfAlg.groupby(
+            ['Bin', 'Lmbda']).max().unstack('Bin').plot(style='b--', legend=False)
+        dfDC.groupby(['Lmbda']).max().plot(ax=ax)
+    if mode == PLOT_MEAN:
+        ax = dfAlg.groupby(
+            ['Bin', 'Lmbda']).mean().unstack('Bin').plot(style='b--', legend=False)
+        dfDC.groupby(['Lmbda']).mean().plot(ax=ax)
     plt.plot((0, 1), (1, 1), label='OPT')
+
+    x = np.arange(0.005, 1.0, 0.005)
+
+    plt.plot(x, cons(x), 'r', label='Consistency')
+    plt.plot(x, robust(x), 'r', label='Robustness')
     plt.xlabel('Lambda')
     plt.ylabel('Competitive ratio')
-    plt.legend
+    plt.axis([0, 1, 0.9, 2.5])
 
 
 def plot_eta(df, eta_res):
@@ -57,7 +81,7 @@ if __name__ == "__main__":
         print(parsed_args.bin_size)
         data = get_data(parsed_args.sampleFile)
         plot_eta(data, parsed_args.bin_size)
-        plot_lambda(data, parsed_args.bin_size)
+        plot_lambda(data, parsed_args.bin_size, parsed_args.mode)
         plt.show()
     else:
         print("Path not valid!")

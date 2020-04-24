@@ -54,9 +54,9 @@ impl Record {
                     algCost: res.alg_cost as u64,
                     dcCost: res.bdc_cost as u64,
                 };
-                if rec.eta == 0 && rec.lmbda == 0.0 && rec.optCost != rec.algCost {
-                    panic!("This should not happen!")
-                }
+                // if rec.eta == 0 && rec.lmbda == 0.0 && rec.optCost != rec.algCost {
+                //     panic!("This should not happen!")
+                // }
                 return rec;
             }
         }

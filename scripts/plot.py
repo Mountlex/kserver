@@ -87,7 +87,7 @@ def plot_eta(df, eta_res, args):
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(ax=ax,
-                                      style='--', label=f"Lambda={l:1.1f}", legend=True)
+                                      style='--', label=f"Lambda={l:1.2f}", legend=True)
 
     plt.plot((0, max_bin), (1, 1), label='OPT')
     plt.xlabel('Eta / Opt')

@@ -11,6 +11,8 @@ def create_arg_parser():
         description='Plot results from kserver simulation')
     parser.add_argument('sampleFile')
     parser.add_argument('-b', '--bin_size', default=0.25)
+    parser.add_argument('-l', '--lambdas', default=5, type=int)
+    parser.add_argument('-k', '--number_of_servers', default=2)
     parser.add_argument('--max', action='store_true')
 
     return parser
@@ -52,7 +54,7 @@ def plot_lambda(df, eta_res, args):
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(ax=ax,
-                                      style='--', label=f"LambdaDC with Eta/Opt<={l:1.2f}", legend=True)
+                                      style='--', label=f"LambdaDC (Eta/Opt <= {l:1.2f})", legend=True)
 
     plt.plot((0, 1), (1, 1), 'black')
 
@@ -60,17 +62,22 @@ def plot_lambda(df, eta_res, args):
     #plt.plot(x, cons(x), 'r', label='Consistency')
     #plt.plot(x, robust(x), 'r', label='Robustness')
     plt.xlabel('Lambda')
-    plt.ylabel('Competitive ratio')
+    plt.ylabel('Empirical competitive ratio')
     #plt.axis([0, 1, 0.9, 2.5])
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
+    plt.title(f"Simulation with {args.number_of_servers} servers")
+
     fig = plt.gcf()
-    fig.set_dpi(100)
+    fig.set_dpi(200)
     fig.set_size_inches(15, 8, forward=True)
     fig.subplots_adjust(right=0.7)
 
 
 def plot_eta(df, eta_res, args):
+    lambdas = list(np.linspace(0, 1, num=args.lambdas))
+    print(lambdas)
+    df = df[df['Lmbda'].isin(lambdas)]
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res) * eta_res
     max_bin = df['Bin'].max()
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
@@ -82,15 +89,16 @@ def plot_eta(df, eta_res, args):
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(
-            style='--', label=f"LambdaDC ({l:1.2f})", legend=True)
+            style='--', label=f"LambdaDC (Lambda = {l:1.2f})", legend=True)
 
     plt.plot((0, max_bin), (1, 1), 'black')
     plt.xlabel('Eta / Opt')
-    plt.ylabel('Competitive ratio')
+    plt.ylabel('Empirical competitive ratio')
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.title(f"Simulation with {args.number_of_servers} servers")
 
     fig = plt.gcf()
-    fig.set_dpi(100)
+    fig.set_dpi(200)
     fig.set_size_inches(15, 8, forward=True)
     fig.subplots_adjust(right=0.7)
 

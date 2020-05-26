@@ -182,6 +182,7 @@ impl LambdaDC {
     }
 
     fn get_distances(&self, pos_pred: i32, pos_other: i32, req: i32) -> (f32, f32) {
+        //
         let d1 = (pos_pred - req).abs() as f32;
         let d2 = (pos_other - req).abs() as f32;
         if d2 > self.lambda * d1 {
@@ -221,9 +222,19 @@ impl Algorithm for LambdaDC {
                             // left server
                             res[i] += distances.0.floor() as i32;
                             res[j] -= distances.1.floor() as i32;
+                            // Fix rounding errors
+                            if res[i] > res[j] {
+                                res[i] = pos;
+                                res[j] = pos;
+                            }
                         } else {
                             res[i] += distances.1.floor() as i32;
                             res[j] -= distances.0.floor() as i32;
+                            // Fix rounding errors
+                            if res[i] > res[j] {
+                                res[i] = pos;
+                                res[j] = pos;
+                            }
                         }
                     }
                 }

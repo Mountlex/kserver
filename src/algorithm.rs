@@ -210,6 +210,10 @@ impl Algorithm for LambdaDC {
                     let predicted = self.prediction.get_predicted_server(req_idx);
                     if self.lambda == 0.0 {
                         res[predicted] = pos;
+                    } else if self.lambda == 1.0 {
+                        let d = min(current[j] - pos, pos - current[i]);
+                        res[i] += d;
+                        res[j] -= d;
                     } else {
                         let other: usize = *[i, j].iter().find(|&x| *x != predicted).unwrap();
                         let distances = self.get_distances(current[predicted], current[other], pos);

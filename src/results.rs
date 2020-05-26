@@ -30,7 +30,8 @@ impl SimResult {
     pub fn is_invalid(&self) -> bool {
         match self {
             SimResult::KServer(res) => {
-                res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.opt_cost
+                (res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.opt_cost)
+                    || (res.lambda == 1.0 && res.dc_cost != res.alg_cost)
             }
             SimResult::KTaxi(res) => {
                 false //res.lambda == 0.0 && res.eta == 0 && res.alg_cost != res.opt_cost

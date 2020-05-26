@@ -34,9 +34,10 @@ def robust(x):
 
 def plot_lambda(df, eta_res, args):
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res) * eta_res
+    df['Double-Coverage'] = df['CRdc']
     # df = df[df['Bin'] < 10]
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
-    dfDC = df.loc[:, ['Lmbda', 'CRdc']]
+    dfDC = df.loc[:, ['Lmbda', 'Double-Coverage']]
 
     if args.max:
         grouped_data = dfAlg.groupby(
@@ -51,17 +52,16 @@ def plot_lambda(df, eta_res, args):
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(ax=ax,
-                                      style='--', label=f"Eta/Opt<={l:1.2f}", legend=True)
+                                      style='--', label=f"LambdaDC with Eta/Opt<={l:1.2f}", legend=True)
 
-    plt.plot((0, 1), (1, 1), label='OPT')
+    plt.plot((0, 1), (1, 1), 'black')
 
-    x = np.arange(0.005, 1.0, 0.005)
-
-    plt.plot(x, cons(x), 'r', label='Consistency')
-    plt.plot(x, robust(x), 'r', label='Robustness')
+    #x = np.arange(0.005, 1.0, 0.005)
+    #plt.plot(x, cons(x), 'r', label='Consistency')
+    #plt.plot(x, robust(x), 'r', label='Robustness')
     plt.xlabel('Lambda')
     plt.ylabel('Competitive ratio')
-    plt.axis([0, 1, 0.9, 2.5])
+    #plt.axis([0, 1, 0.9, 2.5])
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     fig = plt.gcf()
@@ -74,22 +74,17 @@ def plot_eta(df, eta_res, args):
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res) * eta_res
     max_bin = df['Bin'].max()
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
-    dfDC = df.loc[:, ['CRdc', 'Bin']]
 
     if args.max:
         grouped_data = dfAlg.groupby(['Bin', 'Lmbda']).max().unstack('Lmbda')
-        ax = dfDC.groupby(['Bin']).max().plot(
-            label='DoubleCoverage', legend=True)
     else:
         grouped_data = dfAlg.groupby(['Bin', 'Lmbda']).mean().unstack('Lmbda')
-        ax = dfDC.groupby(['Bin']).mean().plot(
-            label='DoubleCoverage', legend=True)
 
     for label, l in list(grouped_data):
-        grouped_data[(label, l)].plot(ax=ax,
-                                      style='--', label=f"Lambda={l:1.2f}", legend=True)
+        grouped_data[(label, l)].plot(
+            style='--', label=f"LambdaDC ({l:1.2f})", legend=True)
 
-    plt.plot((0, max_bin), (1, 1), label='OPT')
+    plt.plot((0, max_bin), (1, 1), 'black')
     plt.xlabel('Eta / Opt')
     plt.ylabel('Competitive ratio')
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))

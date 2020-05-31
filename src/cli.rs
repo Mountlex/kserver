@@ -50,7 +50,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let cli = Cli::from_args();
 
     println!("{:?}", cli);
-    let mut simu: sim::Simulators;
+    let simu: sim::Simulators;
     let instances = match cli.generator {
         Generators::Sample { config, simulator } => {
             simu = simulator;

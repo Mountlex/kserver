@@ -74,10 +74,7 @@ pub fn generate_instances(
     sample_config: &InstanceSampleConfig,
     config: &InstanceConfig,
 ) -> Result<Vec<Instance>, Box<dyn Error>> {
-    println!(
-        "{}",
-        style("Start generating kserver instances...").bold().cyan()
-    );
+    println!("{}", style("Start generating instances...").bold().cyan());
     let number_of_instances = sample_config.number_of_instances;
     let pb = ProgressBar::new(number_of_instances as u64);
     pb.set_style(
@@ -139,20 +136,6 @@ pub fn load_instances(
         .collect();
 
     Ok(selected_instances)
-}
-
-fn generate_kserver_instance(config: &InstanceConfig) -> Instance {
-    let mut rng = rand::thread_rng();
-    let dist = Uniform::from(config.min_value..config.max_value);
-
-    let requests: Vec<i32> = dist
-        .sample_iter(rng)
-        .take(config.number_of_requests)
-        .collect::<Vec<i32>>();
-    let initial_pos: i32 = dist.sample(&mut rng);
-
-    let initial_positions: Vec<i32> = vec![initial_pos; config.number_of_servers];
-    Instance::from((requests, initial_positions))
 }
 
 fn generate_instance(config: &InstanceConfig, sample_config: &InstanceSampleConfig) -> Instance {

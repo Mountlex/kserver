@@ -241,7 +241,7 @@ impl Algorithm for LambdaDC {
             (Some(i), None) | (None, Some(i)) => {
                 res[i] = pos;
             }
-            _ => panic!("Should not happend!"),
+            _ => panic!("Should not happen!"),
         }
         let costs = config_diff(current, &res);
         return (res, costs);

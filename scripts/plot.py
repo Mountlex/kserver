@@ -20,6 +20,7 @@ def create_arg_parser():
 
 def get_data(filename):
     data = pd.read_csv(filename)
+    data.round(3)
     data['EtaOverOpt'] = data['Eta'] / data['OptCost']
     data['CRalg'] = data['AlgCost'] / data['OptCost']
     data['CRdc'] = data['DcCost'] / data['OptCost']
@@ -81,7 +82,7 @@ def plot_lambda(df, eta_res, args):
 
 def plot_eta(df, eta_res, args):
     lambdas = list(np.linspace(0, 1, num=args.lambdas))
-    print(lambdas)
+    lambdas = [round(l, 3) for l in lambdas]
     df = df[df['Lmbda'].isin(lambdas)]
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res) * eta_res
     max_bin = df['Bin'].max()

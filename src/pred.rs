@@ -1,6 +1,5 @@
 use crate::instance::Instance;
 use crate::pred_generator::PredictionConfig;
-use crate::request::Request;
 use crate::schedule::{CostMetric, Schedule};
 use rand::distributions::{Distribution, Uniform};
 use rand::seq::SliceRandom;

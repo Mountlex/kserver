@@ -3,12 +3,11 @@ use crate::results::SimResult;
 use crate::sample::Sample;
 use console::style;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use itertools_num::linspace;
 use rayon::prelude::*;
 use std::error::Error;
 use std::fmt;
 use structopt::StructOpt;
-
-use itertools_num::linspace;
 
 #[derive(StructOpt, Debug, Copy, Clone)]
 pub struct SimConfig {
@@ -58,11 +57,10 @@ fn simulate_kserver(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, Simu
         .predictions
         .iter()
         .map(|pred| {
-            let (schedule, alg_cost) = lambda_dc(&sample.instance, pred, lambda);
+            let (_, alg_cost) = lambda_dc(&sample.instance, pred, lambda);
             let eta = pred.get_eta(&sample.solution, &sample.instance);
             let res = SimResult {
                 instance: sample.instance.clone(),
-                schedule: schedule,
                 opt_cost: sample.opt_cost,
                 eta,
                 dc_cost: dc_cost,
@@ -88,11 +86,10 @@ fn simulate_ktaxi(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, Simula
         .predictions
         .iter()
         .map(|pred| {
-            let (schedule, alg_cost) = lambda_biased_dc(&sample.instance, pred, lambda);
+            let (_, alg_cost) = lambda_biased_dc(&sample.instance, pred, lambda);
             let eta = pred.get_eta(&sample.solution, &sample.instance);
             let res = SimResult {
                 instance: sample.instance.clone(),
-                schedule: schedule,
                 opt_cost: sample.opt_cost,
                 eta,
                 dc_cost: bdc_cost,
@@ -127,7 +124,6 @@ pub fn run(samples: Vec<Sample>, simulator: Simulators) -> Result<Vec<SimResult>
     let lambdas = linspace::<f32>(0., 1., number_of_lambdas)
         .into_iter()
         .collect::<Vec<f32>>();
-    println!("Lambdas_ {:?}", &lambdas);
     let results = simulate_samples(samples, lambdas, simulator)?;
     println!("{}", style("Simulation finished!").bold().green());
     println!(
@@ -151,14 +147,8 @@ fn simulate_sample(
         .collect::<Vec<SimResult>>();
 
     if results.iter().any(|res| res.is_invalid()) {
-        println!("Instance: {}", sample.instance);
-        println!("OPT: {:?}", sample.solution);
         return Err(SimulatorError::new("Invalid result".to_string()));
     }
-    //return Ok(results
-    //    .into_iter()
-    //    .filter(|res| !res.invalid_result())
-    //    .collect());
     return Ok(results);
 }
 
@@ -182,14 +172,14 @@ fn simulate_samples(
         .filter_map(Result::ok)
         .collect::<Vec<Vec<SimResult>>>();
 
-    let failed_simulations = number_of_samples * lambdas.len() - results.len();
-
-    println!(
-        "{} {}",
-        style("Samples with invalid simulation: ").bold().green(),
-        style(failed_simulations).bold().red()
-    );
-
+    let failed_simulations = number_of_samples - results.len();
+    if failed_simulations > 0 {
+        println!(
+            "{} {}",
+            style("Samples with invalid simulation: ").bold().green(),
+            style(failed_simulations).bold().red()
+        );
+    }
     let res = results.into_iter().flatten().collect::<Vec<SimResult>>();
     Ok(res)
 }

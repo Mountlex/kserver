@@ -110,7 +110,7 @@ impl Algorithm for DoubleCoverage {
     ) -> (ServerConfiguration, u32) {
         let (left, right) = current.adjacent_servers(req);
         let mut res = current.to_vec();
-        let pos = req.get_request_pos();
+        let pos = req.s;
         match (left, right) {
             (Some(i), Some(j)) => {
                 let d = min(current[j] - pos, pos - current[i]);
@@ -139,7 +139,7 @@ impl KTaxiAlgorithm for BiasedDC {
     ) -> (usize, ServerConfiguration, u32) {
         let passive = 1 - active; // other server
         let mut res = current.to_vec();
-        let pos = req.get_request_pos();
+        let pos = req.s;
 
         let mut cost: u32 = 0;
         if res[active] != pos && res[passive] != pos {
@@ -163,10 +163,7 @@ impl KTaxiAlgorithm for BiasedDC {
             new_active = passive;
         }
 
-        if let Request::Relocation(relocation) = req {
-            res[new_active] = relocation.t;
-        }
-
+        res[new_active] = req.t;
         return (new_active, res, cost);
     }
 }
@@ -200,14 +197,14 @@ impl Algorithm for LambdaDC {
         req: Request,
         req_idx: usize,
     ) -> (ServerConfiguration, u32) {
-        let pos = req.get_request_pos();
+        let pos = req.s;
         let (left, right) = current.adjacent_servers(req);
         let mut res = current.to_vec();
         match (left, right) {
             (Some(i), Some(j)) => {
                 if i == j {
                     res[i] = pos;
-                } else {
+                } else if i == j - 1 {
                     let predicted = self.prediction.get_predicted_server(req_idx);
                     if self.lambda == 0.0 {
                         res[predicted] = pos;
@@ -237,6 +234,8 @@ impl Algorithm for LambdaDC {
                             }
                         }
                     }
+                } else {
+                    panic!("No adjacent servers are given!")
                 }
             }
             (Some(i), None) | (None, Some(i)) => {
@@ -270,7 +269,7 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
     ) -> (usize, ServerConfiguration, u32) {
         let passive = 1 - active; // other server
         let mut res = current.to_vec();
-        let pos = req.get_request_pos();
+        let pos = req.s;
 
         let mut cost = 0;
         if res[active] != pos && res[passive] != pos {
@@ -317,9 +316,7 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
             new_active = passive;
         }
 
-        if let Request::Relocation(relocation) = req {
-            res[new_active] = relocation.t;
-        }
+        res[new_active] = req.t;
 
         return (new_active, res, cost);
     }

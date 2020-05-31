@@ -63,10 +63,7 @@ impl Instance {
 
     pub fn build_sample(self: Instance) -> Result<Sample, SolverError> {
         let (solution, costs) = self.solve()?;
-        match self.instance_type {
-            InstanceType::KServer => Ok(KServerSample::new(self, solution, costs).into()),
-            InstanceType::KTaxi => Ok(KTaxiSample::new(self, solution, costs).into()),
-        }
+        Ok(Sample::new(self, solution, costs))
     }
 }
 
@@ -94,7 +91,7 @@ fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &Instan
                 VertexType::InitVertex(j),
                 VertexType::FromVertex(i),
                 Capacity(1),
-                Cost((x.get_request_pos() - y).abs()),
+                Cost((x.s - y).abs()),
             );
         }
         graph.add_edge(
@@ -111,15 +108,12 @@ fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &Instance) 
     for (i, x) in instance.requests().iter().enumerate() {
         for (j, y) in instance.requests().iter().enumerate() {
             if i < j {
-                let relocated_pos = match x {
-                    Request::Simple(req) => req.pos,
-                    Request::Relocation(req) => req.t,
-                };
+                let relocated_pos = x.t;
                 graph.add_edge(
                     VertexType::ToVertex(i),
                     VertexType::FromVertex(j),
                     Capacity(1),
-                    Cost((relocated_pos - y.get_request_pos()).abs()),
+                    Cost((relocated_pos - y.s).abs()),
                 );
             }
         }
@@ -156,13 +150,7 @@ fn create_schedule(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> S
     let mut fixed_tuples = order_servers_correctly(tuples, instance);
     fixed_tuples.sort_by_key(|&(_, r)| r);
     for (s, r) in fixed_tuples.iter() {
-        schedule.append_move(
-            *s,
-            match instance.req(r) {
-                Request::Relocation(request) => request.t,
-                Request::Simple(request) => request.pos,
-            },
-        );
+        schedule.append_move(*s, instance.req(r).t);
     }
     schedule
 }
@@ -178,7 +166,7 @@ fn order_servers_correctly(
         .enumerate()
         .flat_map(|(i, _)| tuples.iter().find(|(s, _)| i == *s))
         .map(|s| *s)
-        .map(|(s, r)| (s, r, instance.req(&r).get_request_pos()))
+        .map(|(s, r)| (s, r, instance.req(&r).s))
         .collect();
     first_requests.sort_by(|a, b| a.2.cmp(&b.2));
     let mut server_mapping: HashMap<_, _> = (0..instance.k()).enumerate().collect();

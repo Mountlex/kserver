@@ -69,10 +69,7 @@ impl Prediction {
 
         for (idx, req) in instance.requests().iter().enumerate() {
             let mut last = schedule.last().unwrap().to_vec();
-            last[self.0[idx]] = match req {
-                Request::Simple(r) => r.pos,
-                Request::Relocation(r) => r.t,
-            };
+            last[self.0[idx]] = req.t;
             schedule.push(last);
         }
 
@@ -99,10 +96,7 @@ pub fn to_prediction(schedule: &Schedule, instance: &Instance) -> Prediction {
             config
                 .iter()
                 .enumerate()
-                .find(|(_, &server)| match instance.requests()[idx] {
-                    Request::Simple(r) => server == r.pos,
-                    Request::Relocation(r) => server == r.t,
-                })
+                .find(|(_, &server)| server == instance.requests()[idx].t)
                 .map(|(i, _)| i)
                 .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!\nSolution={:?} Instance={}", schedule, instance))
         })

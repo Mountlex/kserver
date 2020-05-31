@@ -7,13 +7,7 @@ pub trait ServerConfig {
 
     fn moved_server(&self, other: &Self) -> Option<usize>;
 
-    fn left_server(&self, req: Request) -> Option<usize>;
-
-    fn right_server(&self, req: Request) -> Option<usize>;
-
-    fn adjacent_servers(&self, req: Request) -> (Option<usize>, Option<usize>) {
-        (self.left_server(req), self.right_server(req))
-    }
+    fn adjacent_servers(&self, req: Request) -> (Option<usize>, Option<usize>);
 }
 
 pub fn is_normalized(config: &ServerConfiguration) -> bool {
@@ -59,18 +53,25 @@ impl ServerConfig for ServerConfiguration {
         res
     }
 
-    fn right_server(&self, req: Request) -> Option<usize> {
-        self.into_iter()
-            .enumerate()
-            .find(|(_, &r)| r >= req.get_request_pos())
-            .map(|(i, _)| i)
-    }
-    fn left_server(&self, req: Request) -> Option<usize> {
-        self.into_iter()
-            .enumerate()
-            .rev()
-            .find(|(_, &r)| r <= req.get_request_pos())
-            .map(|(i, _)| i)
+    fn adjacent_servers(&self, req: Request) -> (Option<usize>, Option<usize>) {
+        let mut right_index: Option<usize> = None;
+        for (idx, &server) in self.iter().enumerate() {
+            if server >= req.s {
+                right_index = Some(idx);
+                break;
+            }
+        }
+        match right_index {
+            Some(0) => (None, right_index),
+            Some(right) => {
+                if self[right] == req.s {
+                    (right_index, right_index)
+                } else {
+                    (Some(right - 1), right_index)
+                }
+            }
+            None => (Some(self.len() - 1), None),
+        }
     }
 }
 
@@ -96,26 +97,5 @@ mod tests {
         let config1 = vec![10, 15, 25];
         let new_conf = config1.from_move(2, 30);
         assert_eq!(vec![10, 15, 30], new_conf);
-    }
-
-    #[test]
-    fn server_config_find_right_server_works() {
-        let config = vec![10, 15, 25, 50];
-        let req1: Request = 20.into();
-        let req2: Request = 25.into();
-        let req3: Request = 75.into();
-        assert_eq!(Some(2), config.right_server(req1));
-        assert_eq!(Some(2), config.right_server(req2));
-        assert_eq!(None, config.right_server(req3));
-    }
-    #[test]
-    fn server_config_find_left_server_works() {
-        let config = vec![10, 15, 25, 50];
-        let req1: Request = 20.into();
-        let req2: Request = 15.into();
-        let req3: Request = 5.into();
-        assert_eq!(Some(1), config.left_server(req1));
-        assert_eq!(Some(1), config.left_server(req2));
-        assert_eq!(None, config.left_server(req3));
     }
 }

@@ -28,37 +28,17 @@ struct Record {
 impl Record {
     #[allow(unused_variables)]
     fn from_result(sim_res: SimResult, config: &ExportConfig) -> Record {
-        match sim_res {
-            SimResult::KServer(res) => {
-                let rec = Record {
-                    numberOfServers: res.instance.k() as u64,
-                    numberOfRequests: res.instance.length() as u64,
-                    lmbda: res.lambda,
-                    eta: res.eta as u64,
-                    optCost: res.opt_cost as u64,
-                    algCost: res.alg_cost as u64,
-                    dcCost: res.dc_cost as u64,
-                };
-                if rec.eta == 0 && rec.lmbda == 0.0 && rec.optCost != rec.algCost {
-                    panic!("This should not happen!")
-                }
-                return rec;
-            }
-            SimResult::KTaxi(res) => {
-                let rec = Record {
-                    numberOfServers: res.instance.k() as u64,
-                    numberOfRequests: res.instance.length() as u64,
-                    lmbda: res.lambda,
-                    eta: res.eta as u64,
-                    optCost: res.opt_cost as u64,
-                    algCost: res.alg_cost as u64,
-                    dcCost: res.bdc_cost as u64,
-                };
-                // if rec.eta == 0 && rec.lmbda == 0.0 && rec.optCost != rec.algCost {
-                //     panic!("This should not happen!")
-                // }
-                return rec;
-            }
+        {
+            let rec = Record {
+                numberOfServers: sim_res.instance.k() as u64,
+                numberOfRequests: sim_res.instance.length() as u64,
+                lmbda: sim_res.lambda,
+                eta: sim_res.eta as u64,
+                optCost: sim_res.opt_cost as u64,
+                algCost: sim_res.alg_cost as u64,
+                dcCost: sim_res.dc_cost as u64,
+            };
+            return rec;
         }
     }
 }

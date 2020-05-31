@@ -66,7 +66,12 @@ def plot_lambda(df, eta_res, args):
     #plt.axis([0, 1, 0.9, 2.5])
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-    plt.title(f"Simulation with {args.number_of_servers} servers")
+    if args.max:
+        plt.title(
+            f"Simulation with {args.number_of_servers} servers (max over all samples)")
+    else:
+        plt.title(
+            f"Simulation with {args.number_of_servers} servers (mean over all samples)")
 
     fig = plt.gcf()
     fig.set_dpi(200)
@@ -95,7 +100,13 @@ def plot_eta(df, eta_res, args):
     plt.xlabel('Eta / Opt')
     plt.ylabel('Empirical competitive ratio')
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.title(f"Simulation with {args.number_of_servers} servers")
+
+    if args.max:
+        plt.title(
+            f"Simulation with {args.number_of_servers} servers (max over all samples)")
+    else:
+        plt.title(
+            f"Simulation with {args.number_of_servers} servers (mean over all samples)")
 
     fig = plt.gcf()
     fig.set_dpi(200)

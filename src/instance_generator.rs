@@ -19,18 +19,15 @@ pub struct InstanceConfig {
 
     #[structopt(long = "min", default_value = "0")]
     pub min_value: i32,
-    #[structopt(long = "max", default_value = "200")]
+    #[structopt(long = "max", default_value = "2000")]
     pub max_value: i32,
 }
 
 #[derive(StructOpt, Debug)]
-pub struct KServerInstanceSampleConfig {
+pub struct InstanceSampleConfig {
     pub number_of_instances: usize,
-}
 
-#[derive(StructOpt, Debug)]
-pub struct KTaxiInstanceSampleConfig {
-    pub number_of_instances: usize,
+    #[structopt(long = "relocations", short = "r", default_value = "0.0")]
     pub percentage_of_relocations: f32,
 }
 
@@ -73,8 +70,8 @@ impl InstanceError {
     }
 }
 
-pub fn generate_kserver_instances(
-    sample_config: &KServerInstanceSampleConfig,
+pub fn generate_instances(
+    sample_config: &InstanceSampleConfig,
     config: &InstanceConfig,
 ) -> Result<Vec<Instance>, Box<dyn Error>> {
     println!(
@@ -90,30 +87,7 @@ pub fn generate_kserver_instances(
     let mut instances = Vec::with_capacity(number_of_instances);
 
     for _ in (0..number_of_instances).progress_with(pb) {
-        instances.push(generate_kserver_instance(config));
-    }
-    println!("{}", style("Finished generation!").bold().green());
-    Ok(instances)
-}
-
-pub fn generate_ktaxi_instances(
-    sample_config: &KTaxiInstanceSampleConfig,
-    config: &InstanceConfig,
-) -> Result<Vec<Instance>, Box<dyn Error>> {
-    println!(
-        "{}",
-        style("Start generating kserver instances...").bold().cyan()
-    );
-    let number_of_instances = sample_config.number_of_instances;
-    let pb = ProgressBar::new(number_of_instances as u64);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] ({pos}/{len})"),
-    );
-    let mut instances = Vec::with_capacity(number_of_instances);
-
-    for _ in (0..number_of_instances).progress_with(pb) {
-        instances.push(generate_ktaxi_instance(config, sample_config));
+        instances.push(generate_instance(config, sample_config));
     }
     println!("{}", style("Finished generation!").bold().green());
     Ok(instances)
@@ -181,17 +155,16 @@ fn generate_kserver_instance(config: &InstanceConfig) -> Instance {
     Instance::from((requests, initial_positions))
 }
 
-fn generate_ktaxi_instance(
-    config: &InstanceConfig,
-    sample_config: &KTaxiInstanceSampleConfig,
-) -> Instance {
+fn generate_instance(config: &InstanceConfig, sample_config: &InstanceSampleConfig) -> Instance {
     let mut rng = rand::thread_rng();
     let dist = Uniform::from(config.min_value..config.max_value);
 
     let mut requests: Vec<(i32, i32)> = vec![];
     for _idx in 0..config.number_of_requests {
         let s = dist.sample(&mut rng);
-        if rng.gen::<f32>() < sample_config.percentage_of_relocations {
+        if sample_config.percentage_of_relocations > 0.0
+            && rng.gen::<f32>() < sample_config.percentage_of_relocations
+        {
             let t = dist.sample(&mut rng);
             requests.push((s, t));
         } else {

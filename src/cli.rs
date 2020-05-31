@@ -6,13 +6,10 @@ use std::error::Error;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "k-server-simulation")]
-struct KServer {
+#[structopt(name = "server-simulation")]
+struct Cli {
     #[structopt(short, long)]
     debug: bool,
-
-    #[structopt(flatten)]
-    sim_config: sim::SimConfig,
 
     #[structopt(flatten)]
     instance_config: instance_generator::InstanceConfig,
@@ -24,43 +21,50 @@ struct KServer {
     export_config: export::ExportConfig,
 
     #[structopt(subcommand)]
-    cmd: Command,
+    generator: Generators,
 }
 
 #[derive(StructOpt, Debug)]
-pub enum Command {
+pub enum Generators {
     /// Sample kserver instances
-    #[structopt(name = "kserver_sample")]
-    SampleKServer(instance_generator::KServerInstanceSampleConfig),
+    #[structopt(name = "sample")]
+    Sample {
+        #[structopt(flatten)]
+        config: instance_generator::InstanceSampleConfig,
 
-    /// Sample ktaxi instances
-    #[structopt(name = "ktaxi_sample")]
-    SampleKTaxi(instance_generator::KTaxiInstanceSampleConfig),
+        #[structopt(subcommand)]
+        simulator: sim::Simulators,
+    },
 
     #[structopt(name = "load_instances")]
-    LoadInstances(instance_generator::InstanceLoadConfig),
+    LoadInstances {
+        #[structopt(flatten)]
+        config: instance_generator::InstanceLoadConfig,
+
+        #[structopt(subcommand)]
+        simulator: sim::Simulators,
+    },
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let cli = KServer::from_args();
+    let cli = Cli::from_args();
 
     println!("{:?}", cli);
-
-    let instances = match cli.cmd {
-        Command::SampleKServer(config) => {
-            instance_generator::generate_kserver_instances(&config, &cli.instance_config)?
-        }        
-        Command::SampleKTaxi(config) => {
-            instance_generator::generate_ktaxi_instances(&config, &cli.instance_config)?
+    let mut simu: sim::Simulators;
+    let instances = match cli.generator {
+        Generators::Sample { config, simulator } => {
+            simu = simulator;
+            instance_generator::generate_instances(&config, &cli.instance_config)?
         }
-        Command::LoadInstances(config) => {
+        Generators::LoadInstances { config, simulator } => {
+            simu = simulator;
             instance_generator::load_instances(&config, &cli.instance_config)?
         }
     };
 
     let samples = sample_generator::run(instances, &cli.sample_config)?;
 
-    let results = sim::run(samples, &cli.sim_config)?;
+    let results = sim::run(samples, simu)?;
     export::run(results, &cli.export_config)?;
 
     Ok(())

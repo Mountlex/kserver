@@ -143,15 +143,19 @@ fn generate_instance(config: &InstanceConfig, sample_config: &InstanceSampleConf
     let dist = Uniform::from(config.min_value..config.max_value);
 
     let mut requests: Vec<(i32, i32)> = vec![];
-    for _idx in 0..config.number_of_requests {
+    let mut count = 0;
+    while count < config.number_of_requests {
         let s = dist.sample(&mut rng);
         if sample_config.percentage_of_relocations > 0.0
             && rng.gen::<f32>() < sample_config.percentage_of_relocations
         {
             let t = dist.sample(&mut rng);
+            requests.push((s, s));
             requests.push((s, t));
+            count += 2;
         } else {
             requests.push((s, s));
+            count += 1;
         }
     }
     let initial_pos: i32 = dist.sample(&mut rng);

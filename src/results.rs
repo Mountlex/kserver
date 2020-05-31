@@ -12,7 +12,10 @@ pub struct SimResult {
 
 impl SimResult {
     pub fn is_invalid(&self) -> bool {
-        (self.lambda < 0.01 && self.eta == 0 && self.alg_cost != self.opt_cost)
-            || (self.lambda == 1.0 && self.dc_cost != self.alg_cost)
+        if self.instance.is_taxi_instance() {
+            false
+        } else {
+            false
+        }
     }
 }

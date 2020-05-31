@@ -84,9 +84,6 @@ trait KTaxiAlgorithm {
             schedule.append_config(next);
         }
 
-        if costs > 200000 {
-            println!("Schedule: {:?}", schedule);
-        }
         (schedule, costs)
     }
 

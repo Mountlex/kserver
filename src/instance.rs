@@ -34,6 +34,15 @@ impl Instance {
     }
 }
 
+impl std::iter::IntoIterator for Instance {
+    type Item = Request;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.requests.into_iter()
+    }
+}
+
 impl std::fmt::Display for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(

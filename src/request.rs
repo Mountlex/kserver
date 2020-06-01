@@ -10,12 +10,12 @@
 /// ```
 /// # use serversim::request::Request;
 /// let simple_req = Request::from(4);
-/// assert_eq!(4, simple_req.s);
-/// assert_eq!(4, simple_req.t);
+/// assert_eq!(4.0, simple_req.s);
+/// assert_eq!(4.0, simple_req.t);
 /// assert!(simple_req.is_simple());
 /// let relocation_req = Request::from((2,4));
-/// assert_eq!(2, relocation_req.s);
-/// assert_eq!(4, relocation_req.t);
+/// assert_eq!(2.0, relocation_req.s);
+/// assert_eq!(4.0, relocation_req.t);
 /// assert!(!relocation_req.is_simple());
 /// ```
 #[derive(Copy, Clone, Debug)]

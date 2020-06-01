@@ -20,7 +20,7 @@ def create_arg_parser():
 
 def get_data(filename):
     data = pd.read_csv(filename)
-    data.round(3)
+    data = data.round(3)
     data['EtaOverOpt'] = data['Eta'] / data['OptCost']
     data['CRalg'] = data['AlgCost'] / data['OptCost']
     data['CRdc'] = data['DcCost'] / data['OptCost']

@@ -17,16 +17,17 @@ use crate::request::Request;
 /// ```
 /// It can also directly be build using `new`:
 /// ```
-/// # use serversim::server_config::ServerConfiguration;
-/// let config = ServerConfiguration::new(vec![1,4,7]);
+/// # use serversim::server_config::Server
+/// Configuration;
+/// let config = ServerConfiguration::from(vec![1.0,4.0,7.0]);
 /// assert_eq!(3, config.size());
 /// ```
 /// Given a configuration, one can derive another configuration based on moving a server. These operations can also be chained.
 /// ```
 /// # use serversim::server_config::ServerConfiguration;
-/// let config = ServerConfiguration::new(vec![1,4,7]);
-/// let next = config.from_move(1, 6).from_move(2, 8);
-/// assert_eq!(ServerConfiguration::new(vec![1,6,8]), next);
+/// let config = ServerConfiguration::from(vec![1,4,7]);
+/// let next = config.from_move(1, 6.0).from_move(2, 8.0);
+/// assert_eq!(ServerConfiguration::from(vec![1,6,8]), next);
 /// ```
 ///
 /// ### Normalization

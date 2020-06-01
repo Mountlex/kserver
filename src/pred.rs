@@ -142,19 +142,19 @@ pub fn generate_predictions(
                         // left
                         if server > 0 {
                             //left
-                            pred_vec.push(predict(0, server - 1));
+                            pred_vec.push(server - 1);
                         } else {
                             //right
-                            pred_vec.push(predict(server + 1, k - 1));
+                            pred_vec.push(server + 1);
                         }
                     } else {
                         // right
                         if server < k - 1 {
                             // right
-                            pred_vec.push(predict(server + 1, k - 1));
+                            pred_vec.push(server + 1);
                         } else {
                             // left
-                            pred_vec.push(predict(0, server - 1));
+                            pred_vec.push(server - 1);
                         }
                     }
                 }

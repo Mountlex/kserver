@@ -198,18 +198,11 @@ impl Algorithm for LambdaDC {
         match (left, right) {
             (Some(i), Some(j)) => {
                 if i == j - 1 {
+                    // neither i nor j are on the request
                     let predicted = self.prediction.get_predicted_server(req_idx);
                     let fast_server = if predicted <= i { i } else { j };
                     if self.lambda == 0.0 {
                         res[fast_server] = pos;
-                    } else if self.lambda == 1.0 {
-                        let d = min!(current[j] - pos, pos - current[i]);
-                        res[i] += d;
-                        res[j] -= d;
-                        if res[i] > res[j] {
-                            res[i] = pos;
-                            res[j] = pos;
-                        }
                     } else {
                         let other: usize = if fast_server == i { j } else { j };
                         let (fast, slow) =

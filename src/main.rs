@@ -1,5 +1,5 @@
+use serversim::cli::run;
 use std::process;
-use kserver::cli::run;
 
 extern crate itertools_num;
 

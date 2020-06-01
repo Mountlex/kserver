@@ -1,6 +1,19 @@
 use crate::request::*;
 use crate::server_config::ServerConfiguration;
 
+/// Represents an instance for an online server problem on the line.
+///
+/// An instance is composed of an `initial_configuration` and a sequence of `requests`.
+///
+/// ## Examples
+///
+/// An instance with initial configuration (3,6) and requests 2,8,5 can be directly build from vectors using the `From`-trait:
+/// ```
+/// # use serversim::instance::Instance;
+/// let instance = Instance::from((vec![2,8,5], vec![3,6]));
+/// assert_eq!(2, instance.k());
+/// assert_eq!(3, instance.length());
+/// ```
 #[derive(Clone, Debug)]
 pub struct Instance {
     requests: Vec<Request>,

@@ -1,10 +1,63 @@
 use crate::cost::CostMetric;
 use crate::request::Request;
 
+/// Represents a state of the servers on the line.algorithm
+///
+/// A configuration is a snapshot of the server's positions at a fixed point in time.
+/// For the k-server problem on the line, we assume that the configuration of the servers is ordered.
+///
+/// ## Examples
+///
+/// ### Instantiation
+/// A server configuration implements the `From`-trait for a vector of integers:
+/// ```
+/// # use serversim::server_config::ServerConfiguration;
+/// let config: ServerConfiguration = vec![1,4,7].into();
+/// assert_eq!(3, config.size());
+/// ```
+/// It can also directly be build using `new`:
+/// ```
+/// # use serversim::server_config::ServerConfiguration;
+/// let config = ServerConfiguration::new(vec![1,4,7]);
+/// assert_eq!(3, config.size());
+/// ```
+/// Given a configuration, one can derive another configuration based on moving a server. These operations can also be chained.
+/// ```
+/// # use serversim::server_config::ServerConfiguration;
+/// let config = ServerConfiguration::new(vec![1,4,7]);
+/// let next = config.from_move(1, 6).from_move(2, 8);
+/// assert_eq!(ServerConfiguration::new(vec![1,6,8]), next);
+/// ```
+///
+/// ### Normalization
+/// A server configuration can be sorted using the `normalize` method.
+/// ```
+/// # use serversim::server_config::ServerConfiguration;
+/// let mut config: ServerConfiguration = vec![3,5,1].into();
+/// config.normalize();
+/// assert_eq!(ServerConfiguration::from(vec![1,3,5]), config);
+/// ```
+///
+/// ### Inspection
+/// Given a request, we can search the configuration for adjacent servers using the `adjacent_servers` method.
+/// ```
+/// # use serversim::server_config::ServerConfiguration;
+/// # use serversim::request::Request;
+/// let config: ServerConfiguration = vec![1,5,10].into();
+/// assert_eq!((Some(0), Some(1)), config.adjacent_servers(Request::from(3)));
+/// assert_eq!((None, Some(0)), config.adjacent_servers(Request::from(-1)));
+/// assert_eq!((Some(1), Some(1)), config.adjacent_servers(Request::from(5)));
+/// assert_eq!((Some(2), Some(2)), config.adjacent_servers(Request::from(10)));
+/// assert_eq!((Some(2), None), config.adjacent_servers(Request::from(12)));
+/// ```
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct ServerConfiguration(Vec<i32>);
 
 impl ServerConfiguration {
+    pub fn new(positions: Vec<i32>) -> ServerConfiguration {
+        ServerConfiguration(positions)
+    }
+
     pub fn from_move(&self, id: usize, pos: i32) -> ServerConfiguration {
         let mut new_pos = ServerConfiguration(self.0.to_vec());
         new_pos.0[id] = pos;
@@ -53,7 +106,7 @@ impl CostMetric<u32> for ServerConfiguration {
 
 impl From<Vec<i32>> for ServerConfiguration {
     fn from(vec: Vec<i32>) -> ServerConfiguration {
-        ServerConfiguration(vec)
+        ServerConfiguration::new(vec)
     }
 }
 

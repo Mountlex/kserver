@@ -75,7 +75,7 @@ impl Prediction {
         schedule
     }
 
-    pub fn get_eta(&self, solution: &Schedule, instance: &Instance) -> u32 {
+    pub fn get_eta(&self, solution: &Schedule, instance: &Instance) -> f64 {
         let pred_schedule = self.to_schedule(instance);
         return solution.diff(&pred_schedule);
     }
@@ -95,7 +95,7 @@ pub fn to_prediction(schedule: &Schedule, instance: &Instance) -> Prediction {
             config
                 .into_iter()
                 .enumerate()
-                .find(|(_, &server)| server == instance.requests()[idx].t)
+                .find(|(_, &server)| server == instance[idx].t)
                 .map(|(i, _)| i)
                 .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!\nSolution={:?} Instance={}", schedule, instance))
         })

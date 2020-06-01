@@ -4,7 +4,6 @@ use crate::pred::Prediction;
 use crate::request::*;
 use crate::schedule::Schedule;
 use crate::server_config::*;
-use std::cmp::min;
 
 macro_rules! min {
     ($x: expr) => ($x);
@@ -18,17 +17,17 @@ macro_rules! min {
     }}
 }
 
-pub fn double_coverage(instance: &Instance) -> (Schedule, u32) {
+pub fn double_coverage(instance: &Instance) -> (Schedule, f64) {
     let dc = DoubleCoverage;
     return dc.run(instance);
 }
 
-pub fn lambda_dc(instance: &Instance, prediction: &Prediction, lambda: f32) -> (Schedule, u32) {
+pub fn lambda_dc(instance: &Instance, prediction: &Prediction, lambda: f32) -> (Schedule, f64) {
     let alg = LambdaDC::new(prediction.clone(), lambda);
     return alg.run(instance);
 }
 
-pub fn biased_dc(instance: &Instance) -> (Schedule, u32) {
+pub fn biased_dc(instance: &Instance) -> (Schedule, f64) {
     let bdc = BiasedDC;
     return bdc.run(instance);
 }
@@ -37,15 +36,15 @@ pub fn lambda_biased_dc(
     instance: &Instance,
     prediction: &Prediction,
     lambda: f32,
-) -> (Schedule, u32) {
+) -> (Schedule, f64) {
     let lbdc = LambdaBiasedDC::new(prediction.clone(), lambda);
     return lbdc.run(instance);
 }
 
 trait Algorithm {
-    fn run(&self, instance: &Instance) -> (Schedule, u32) {
+    fn run(&self, instance: &Instance) -> (Schedule, f64) {
         let mut schedule = Schedule::from(instance.initial_positions().clone());
-        let mut costs = 0;
+        let mut costs: f64 = 0.0;
 
         for (idx, &req) in instance.requests().into_iter().enumerate() {
             let current = schedule.last().unwrap();
@@ -63,13 +62,13 @@ trait Algorithm {
         current: &ServerConfiguration,
         next_request: Request,
         request_index: usize,
-    ) -> (ServerConfiguration, u32);
+    ) -> (ServerConfiguration, f64);
 }
 
 trait KTaxiAlgorithm {
-    fn run(&self, instance: &Instance) -> (Schedule, u32) {
+    fn run(&self, instance: &Instance) -> (Schedule, f64) {
         let mut schedule = Schedule::from(instance.initial_positions().clone());
-        let mut costs: u32 = 0;
+        let mut costs: f64 = 0.0;
 
         let mut active = 0;
         for (idx, &req) in instance.requests().into_iter().enumerate() {
@@ -94,7 +93,7 @@ trait KTaxiAlgorithm {
         active: usize,
         next_request: Request,
         req_idx: usize,
-    ) -> (usize, ServerConfiguration, u32);
+    ) -> (usize, ServerConfiguration, f64);
 }
 
 struct DoubleCoverage;
@@ -105,13 +104,13 @@ impl Algorithm for DoubleCoverage {
         current: &ServerConfiguration,
         req: Request,
         _req_idx: usize,
-    ) -> (ServerConfiguration, u32) {
+    ) -> (ServerConfiguration, f64) {
         let (left, right) = current.adjacent_servers(req);
         let mut res = current.clone();
         let pos = req.s;
         match (left, right) {
             (Some(i), Some(j)) => {
-                let d = min(current[j] - pos, pos - current[i]);
+                let d = min!(current[j] - pos, pos - current[i]);
                 res[i] += d;
                 res[j] -= d;
             }
@@ -134,12 +133,12 @@ impl KTaxiAlgorithm for BiasedDC {
         active: usize,
         req: Request,
         _req_idx: usize,
-    ) -> (usize, ServerConfiguration, u32) {
+    ) -> (usize, ServerConfiguration, f64) {
         let passive = 1 - active; // other server
         let mut res = current.clone();
         let pos = req.s;
 
-        let mut cost: u32 = 0;
+        let mut cost: f64 = 0.0;
         if res[active] != pos && res[passive] != pos {
             let dp = min!(
                 2.0 * (pos - current[active]).abs() as f32,
@@ -147,11 +146,9 @@ impl KTaxiAlgorithm for BiasedDC {
             );
             let da = dp / 2.0 as f32;
 
-            res[active] +=
-                (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
-            res[passive] +=
-                (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
-            cost = (da + dp) as u32;
+            res[active] += da * ((pos - current[active]) / (pos - current[active]).abs());
+            res[passive] += dp * ((pos - current[passive]) / (pos - current[passive]).abs());
+            cost = (da + dp) as f64;
             //println!("biasedDC: da={} dp={}", da, dp);
         }
         let new_active;
@@ -176,10 +173,10 @@ impl LambdaDC {
         LambdaDC { prediction, lambda }
     }
 
-    fn get_distances(&self, pos_pred: i32, pos_other: i32, req: i32) -> (f32, f32) {
+    fn get_distances(&self, pos_pred: f32, pos_other: f32, req: f32) -> (f32, f32) {
         //
-        let d1 = (pos_pred - req).abs() as f32;
-        let d2 = (pos_other - req).abs() as f32;
+        let d1 = (pos_pred - req).abs();
+        let d2 = (pos_other - req).abs();
         if d2 >= self.lambda * d1 {
             (d1, self.lambda * d1)
         } else {
@@ -194,7 +191,7 @@ impl Algorithm for LambdaDC {
         current: &ServerConfiguration,
         req: Request,
         req_idx: usize,
-    ) -> (ServerConfiguration, u32) {
+    ) -> (ServerConfiguration, f64) {
         let pos = req.s;
         let (left, right) = current.adjacent_servers(req);
         let mut res = ServerConfiguration::from(current.0.to_vec());
@@ -206,17 +203,21 @@ impl Algorithm for LambdaDC {
                     if self.lambda == 0.0 {
                         res[fast_server] = pos;
                     } else if self.lambda == 1.0 {
-                        let d = min(current[j] - pos, pos - current[i]);
+                        let d = min!(current[j] - pos, pos - current[i]);
                         res[i] += d;
                         res[j] -= d;
+                        if res[i] > res[j] {
+                            res[i] = pos;
+                            res[j] = pos;
+                        }
                     } else {
                         let other: usize = if fast_server == i { j } else { j };
-                        let distances =
+                        let (fast, slow) =
                             self.get_distances(current[fast_server], current[other], pos);
                         if i == fast_server {
                             // left server
-                            res[i] += distances.0.floor() as i32;
-                            res[j] -= distances.1.floor() as i32;
+                            res[i] += fast;
+                            res[j] -= slow;
                             // Fix rounding errors
                             if res[i] > res[j] {
                                 res[i] = pos;
@@ -224,8 +225,8 @@ impl Algorithm for LambdaDC {
                             }
                         } else {
                             // j == fast_server
-                            res[i] += distances.1.floor() as i32;
-                            res[j] -= distances.0.floor() as i32;
+                            res[i] += slow;
+                            res[j] -= fast;
                             // Fix rounding errors
                             if res[i] > res[j] {
                                 res[i] = pos;
@@ -263,12 +264,12 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
         active: usize,
         req: Request,
         req_idx: usize,
-    ) -> (usize, ServerConfiguration, u32) {
+    ) -> (usize, ServerConfiguration, f64) {
         let passive = 1 - active; // other server
         let mut res = current.clone();
         let pos = req.s;
 
-        let mut cost = 0;
+        let mut cost: f64 = 0.0;
         if res[active] != pos && res[passive] != pos {
             let predicted = self.prediction.get_predicted_server(req_idx);
 
@@ -279,30 +280,28 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
 
             if active == predicted {
                 dp = min!(
-                    (1.0 + self.lambda) * ((pos - current[active]).abs() as f32),
-                    (pos - current[passive]).abs() as f32
+                    (1.0 + self.lambda) * (pos - current[active]).abs(),
+                    (pos - current[passive]).abs()
                 );
-                da = dp / (1.0 + self.lambda) as f32;
+                da = dp / (1.0 + self.lambda);
             } else {
                 // passive == predicted
                 if self.lambda == 0.0 {
-                    dp = (pos - current[passive]).abs() as f32;
+                    dp = (pos - current[passive]).abs();
                     da = 0.0;
                 } else {
                     dp = min!(
-                        (1.0 + (1.0 / self.lambda)) * ((pos - current[active]).abs() as f32),
-                        (pos - current[passive]).abs() as f32
+                        (1.0 + (1.0 / self.lambda)) * ((pos - current[active]).abs()),
+                        (pos - current[passive]).abs()
                     );
-                    da = dp / (1.0 + (1.0 / self.lambda)) as f32;
+                    da = dp / (1.0 + (1.0 / self.lambda));
                 }
             }
 
-            res[active] +=
-                (da * ((pos - current[active]) / (pos - current[active]).abs()) as f32) as i32;
-            res[passive] +=
-                (dp * ((pos - current[passive]) / (pos - current[passive]).abs()) as f32) as i32;
+            res[active] += da * ((pos - current[active]) / (pos - current[active]).abs());
+            res[passive] += dp * ((pos - current[passive]) / (pos - current[passive]).abs());
             //println!("lambdaBiasedDC: da={} dp={}", da, dp);
-            cost = (da + dp) as u32;
+            cost = (da + dp) as f64;
         } else {
             //println!("Taxi already on request");
         }

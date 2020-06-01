@@ -20,8 +20,8 @@
 /// ```
 #[derive(Copy, Clone, Debug)]
 pub struct Request {
-    pub s: i32,
-    pub t: i32,
+    pub s: f32,
+    pub t: f32,
 }
 
 impl Request {
@@ -40,17 +40,35 @@ impl std::fmt::Display for Request {
     }
 }
 
+impl From<f32> for Request {
+    fn from(pos: f32) -> Self {
+        Request { s: pos, t: pos }
+    }
+}
+
+impl From<(f32, f32)> for Request {
+    fn from(relocation: (f32, f32)) -> Self {
+        Request {
+            s: relocation.0,
+            t: relocation.1,
+        }
+    }
+}
+
 impl From<i32> for Request {
     fn from(pos: i32) -> Self {
-        Request { s: pos, t: pos }
+        Request {
+            s: pos as f32,
+            t: pos as f32,
+        }
     }
 }
 
 impl From<(i32, i32)> for Request {
     fn from(relocation: (i32, i32)) -> Self {
         Request {
-            s: relocation.0,
-            t: relocation.1,
+            s: relocation.0 as f32,
+            t: relocation.1 as f32,
         }
     }
 }

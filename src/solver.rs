@@ -90,7 +90,7 @@ fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &Instan
                 VertexType::InitVertex(j),
                 VertexType::FromVertex(i),
                 Capacity(1),
-                Cost((x.s - y).abs()),
+                Cost((x.s - y).abs() as i32),
             );
         }
         graph.add_edge(
@@ -112,7 +112,7 @@ fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &Instance) 
                     VertexType::ToVertex(i),
                     VertexType::FromVertex(j),
                     Capacity(1),
-                    Cost((relocated_pos - y.s).abs()),
+                    Cost((relocated_pos - y.s).abs() as i32),
                 );
             }
         }

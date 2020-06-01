@@ -50,22 +50,22 @@ use crate::request::Request;
 /// assert_eq!((Some(2), Some(2)), config.adjacent_servers(Request::from(10)));
 /// assert_eq!((Some(2), None), config.adjacent_servers(Request::from(12)));
 /// ```
-#[derive(Debug, Clone, PartialEq, Hash)]
-pub struct ServerConfiguration(pub Vec<i32>);
+#[derive(Debug, Clone, PartialEq)]
+pub struct ServerConfiguration(pub Vec<f32>);
 
 impl ServerConfiguration {
-    pub fn new(positions: Vec<i32>) -> ServerConfiguration {
+    pub fn new(positions: Vec<f32>) -> ServerConfiguration {
         ServerConfiguration(positions)
     }
 
-    pub fn from_move(&self, id: usize, pos: i32) -> ServerConfiguration {
+    pub fn from_move(&self, id: usize, pos: f32) -> ServerConfiguration {
         let mut new_pos = ServerConfiguration(self.0.to_vec());
         new_pos.0[id] = pos;
         return new_pos;
     }
 
     pub fn normalize(&mut self) {
-        self.0.sort();
+        self.0.sort_by(|a, b| a.partial_cmp(b).unwrap());
     }
 
     pub fn size(&self) -> usize {
@@ -86,7 +86,9 @@ impl ServerConfiguration {
                 if self[right] == req.s {
                     (right_index, right_index)
                 } else {
-                    (Some(right - 1), right_index)
+                    assert!(self[right] >= req.s);
+                    assert!(self[right - 1] <= req.s);
+                    (Some(right - 1), Some(right))
                 }
             }
             None => (Some(self.size() - 1), None),
@@ -94,25 +96,31 @@ impl ServerConfiguration {
     }
 }
 
-impl CostMetric<u32> for ServerConfiguration {
-    fn diff(&self, other: &ServerConfiguration) -> u32 {
+impl CostMetric<f64> for ServerConfiguration {
+    fn diff(&self, other: &ServerConfiguration) -> f64 {
         return self
             .into_iter()
             .zip(other.into_iter())
-            .map(|(a, b)| (a - b).abs())
-            .sum::<i32>() as u32;
+            .map(|(a, b)| (a - b).abs() as f64)
+            .sum::<f64>();
+    }
+}
+
+impl From<Vec<f32>> for ServerConfiguration {
+    fn from(vec: Vec<f32>) -> ServerConfiguration {
+        ServerConfiguration::new(vec)
     }
 }
 
 impl From<Vec<i32>> for ServerConfiguration {
     fn from(vec: Vec<i32>) -> ServerConfiguration {
-        ServerConfiguration::new(vec)
+        ServerConfiguration::new(vec.into_iter().map(|e| e as f32).collect())
     }
 }
 
 impl<'a> IntoIterator for &'a ServerConfiguration {
-    type Item = &'a i32;
-    type IntoIter = std::slice::Iter<'a, i32>;
+    type Item = &'a f32;
+    type IntoIter = std::slice::Iter<'a, f32>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
@@ -120,8 +128,8 @@ impl<'a> IntoIterator for &'a ServerConfiguration {
 }
 
 impl IntoIterator for ServerConfiguration {
-    type Item = i32;
-    type IntoIter = std::vec::IntoIter<i32>;
+    type Item = f32;
+    type IntoIter = std::vec::IntoIter<f32>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -129,7 +137,7 @@ impl IntoIterator for ServerConfiguration {
 }
 
 impl std::ops::Index<usize> for ServerConfiguration {
-    type Output = i32;
+    type Output = f32;
     fn index(&self, idx: usize) -> &Self::Output {
         &self.0[idx]
     }
@@ -148,13 +156,13 @@ mod tests {
     fn server_config_diff_works() {
         let config1: ServerConfiguration = vec![10, 15, 25].into();
         let config2: ServerConfiguration = vec![8, 17, 25].into();
-        assert_eq!(4, config1.diff(&config2))
+        assert_eq!(4.0, config1.diff(&config2))
     }
 
     #[test]
     fn server_config_from_move_works() {
         let config1: ServerConfiguration = vec![10, 15, 25].into();
-        let new_conf = config1.from_move(2, 30);
+        let new_conf = config1.from_move(2, 30.0);
         assert_eq!(ServerConfiguration::from(vec![10, 15, 30]), new_conf);
     }
 }

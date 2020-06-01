@@ -57,6 +57,13 @@ impl std::iter::IntoIterator for Instance {
     }
 }
 
+impl std::ops::Index<usize> for Instance {
+    type Output = Request;
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.requests[idx]
+    }
+}
+
 impl std::fmt::Display for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
@@ -79,6 +86,20 @@ impl From<(Vec<i32>, Vec<i32>)> for Instance {
 
 impl From<(Vec<(i32, i32)>, Vec<i32>)> for Instance {
     fn from(instance: (Vec<(i32, i32)>, Vec<i32>)) -> Instance {
+        let requests = instance.0.into_iter().map(|req| req.into()).collect();
+        Instance::new(requests, ServerConfiguration::from(instance.1))
+    }
+}
+
+impl From<(Vec<f32>, Vec<f32>)> for Instance {
+    fn from(instance: (Vec<f32>, Vec<f32>)) -> Instance {
+        let requests = instance.0.into_iter().map(|req| req.into()).collect();
+        Instance::new(requests, ServerConfiguration::from(instance.1))
+    }
+}
+
+impl From<(Vec<(f32, f32)>, Vec<f32>)> for Instance {
+    fn from(instance: (Vec<(f32, f32)>, Vec<f32>)) -> Instance {
         let requests = instance.0.into_iter().map(|req| req.into()).collect();
         Instance::new(requests, ServerConfiguration::from(instance.1))
     }

@@ -4,9 +4,9 @@ use crate::instance::Instance;
 pub struct SimResult {
     pub instance: Instance,
     pub opt_cost: u32,
-    pub eta: u32,
-    pub dc_cost: u32,
-    pub alg_cost: u32,
+    pub eta: f64,
+    pub dc_cost: f64,
+    pub alg_cost: f64,
     pub lambda: f32,
 }
 

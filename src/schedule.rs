@@ -41,15 +41,15 @@ impl std::iter::FromIterator<ServerConfiguration> for Schedule {
     }
 }
 
-impl CostMetric<u32> for Schedule {
-    fn diff(&self, other: &Self) -> u32 {
+impl CostMetric<f64> for Schedule {
+    fn diff(&self, other: &Self) -> f64 {
         if self.0.len() != other.0.len() {
             panic!("Schedules must have same size!")
         }
         return self
             .into_iter()
             .zip(other.into_iter())
-            .map(|(c1, c2)| c1.diff(c2))
+            .map(|(c1, c2)| c1.diff(c2) as f64)
             .sum();
     }
 }
@@ -84,7 +84,7 @@ impl Schedule {
         self.0.push(config);
     }
 
-    pub fn append_move(&mut self, id: usize, position: i32) {
+    pub fn append_move(&mut self, id: usize, position: f32) {
         match self.0.last() {
             None => println!("Cannot append move as there is no initial configuration!"),
             Some(config) => {
@@ -119,7 +119,7 @@ mod tests {
         schedule1.append_config(conf12);
         let mut schedule2 = Schedule::from(conf21);
         schedule2.append_config(conf22);
-        assert_eq!(14, schedule1.diff(&schedule2));
+        assert_eq!(14.0, schedule1.diff(&schedule2));
     }
     #[test]
     #[should_panic]
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn append_move_works() {
         let mut schedule = Schedule::from(ServerConfiguration::from(vec![10, 20]));
-        schedule.append_move(1, 30);
+        schedule.append_move(1, 30.0);
         assert_eq!(
             schedule.last().unwrap(),
             &ServerConfiguration::from(vec![10, 30])

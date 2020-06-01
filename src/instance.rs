@@ -1,13 +1,14 @@
 use crate::request::*;
+use crate::server_config::ServerConfiguration;
 
 #[derive(Clone, Debug)]
 pub struct Instance {
     requests: Vec<Request>,
-    initial_positions: Vec<i32>,
+    initial_positions: ServerConfiguration,
 }
 
 impl Instance {
-    pub fn new(requests: Vec<Request>, initial_positions: Vec<i32>) -> Instance {
+    pub fn new(requests: Vec<Request>, initial_positions: ServerConfiguration) -> Instance {
         Instance {
             requests: requests,
             initial_positions: initial_positions,
@@ -17,12 +18,12 @@ impl Instance {
         self.requests.len()
     }
     pub fn k(&self) -> usize {
-        self.initial_positions.len()
+        self.initial_positions.size()
     }
     pub fn requests(&self) -> &Vec<Request> {
         &self.requests
     }
-    pub fn initial_positions(&self) -> &Vec<i32> {
+    pub fn initial_positions(&self) -> &ServerConfiguration {
         &self.initial_positions
     }
     pub fn req(&self, index: &usize) -> Request {
@@ -59,14 +60,14 @@ impl std::fmt::Display for Instance {
 impl From<(Vec<i32>, Vec<i32>)> for Instance {
     fn from(instance: (Vec<i32>, Vec<i32>)) -> Instance {
         let requests = instance.0.into_iter().map(|req| req.into()).collect();
-        Instance::new(requests, instance.1)
+        Instance::new(requests, ServerConfiguration::from(instance.1))
     }
 }
 
 impl From<(Vec<(i32, i32)>, Vec<i32>)> for Instance {
     fn from(instance: (Vec<(i32, i32)>, Vec<i32>)) -> Instance {
         let requests = instance.0.into_iter().map(|req| req.into()).collect();
-        Instance::new(requests, instance.1)
+        Instance::new(requests, ServerConfiguration::from(instance.1))
     }
 }
 

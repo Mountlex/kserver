@@ -1,51 +1,92 @@
-use crate::server_config::config_diff;
-use crate::server_config::ServerConfig;
+use crate::cost::CostMetric;
 use crate::server_config::ServerConfiguration;
 
-pub type Schedule = Vec<ServerConfiguration>;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Schedule(Vec<ServerConfiguration>);
 
-pub trait CostMetric {
-    fn diff(&self, other: &Self) -> u32;
+impl std::iter::IntoIterator for Schedule {
+    type Item = ServerConfiguration;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
 }
 
-impl CostMetric for Schedule {
+impl<'a> std::iter::IntoIterator for &'a Schedule {
+    type Item = &'a ServerConfiguration;
+    type IntoIter = std::slice::Iter<'a, ServerConfiguration>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl std::iter::FromIterator<ServerConfiguration> for Schedule {
+    fn from_iter<I: IntoIterator<Item = ServerConfiguration>>(iter: I) -> Self {
+        let mut c = Schedule::new();
+        for i in iter {
+            c.append_config(i);
+        }
+        c
+    }
+}
+
+impl CostMetric<u32> for Schedule {
     fn diff(&self, other: &Self) -> u32 {
-        if self.len() != other.len() {
+        if self.0.len() != other.0.len() {
             panic!("Schedules must have same size!")
         }
         return self
-            .iter()
-            .zip(other.iter())
-            .map(|(c1, c2)| config_diff(c1, c2))
+            .into_iter()
+            .zip(other.into_iter())
+            .map(|(c1, c2)| c1.diff(c2))
             .sum();
     }
 }
 
-pub trait ScheduleCreation {
-    fn new_schedule(initial_configuration: ServerConfiguration) -> Self;
-
-    fn append_config(&mut self, config: ServerConfiguration);
-
-    fn append_move(&mut self, id: usize, position: i32);
+impl From<ServerConfiguration> for Schedule {
+    fn from(initial_config: ServerConfiguration) -> Self {
+        Schedule(vec![initial_config])
+    }
 }
 
-impl ScheduleCreation for Schedule {
-    fn new_schedule(initial_configuration: ServerConfiguration) -> Schedule {
-        vec![initial_configuration]
+impl From<Vec<ServerConfiguration>> for Schedule {
+    fn from(config_list: Vec<ServerConfiguration>) -> Self {
+        config_list.into_iter().collect()
+    }
+}
+
+impl From<Vec<Vec<i32>>> for Schedule {
+    fn from(config_list: Vec<Vec<i32>>) -> Self {
+        config_list
+            .into_iter()
+            .map(|vec| ServerConfiguration::from(vec))
+            .collect()
+    }
+}
+
+impl Schedule {
+    pub fn new() -> Schedule {
+        Schedule(Vec::new())
     }
 
-    fn append_config(&mut self, config: ServerConfiguration) {
-        self.push(config);
+    pub fn append_config(&mut self, config: ServerConfiguration) {
+        self.0.push(config);
     }
 
-    fn append_move(&mut self, id: usize, position: i32) {
-        match self.last() {
+    pub fn append_move(&mut self, id: usize, position: i32) {
+        match self.0.last() {
             None => println!("Cannot append move as there is no initial configuration!"),
             Some(config) => {
                 let next_conf = config.from_move(id, position);
-                self.push(next_conf);
+                self.0.push(next_conf);
             }
         }
+    }
+
+    pub fn last(&self) -> Option<&ServerConfiguration> {
+        self.0.last()
     }
 }
 
@@ -55,28 +96,31 @@ mod tests {
 
     #[test]
     fn schedule_diff_works() {
-        let conf11 = vec![10, 15, 25];
-        let conf12 = vec![8, 17, 20];
-        let conf21 = vec![10, 15, 25];
-        let conf22 = vec![12, 17, 30];
-        let mut schedule1 = Schedule::new_schedule(conf11);
+        let conf11 = ServerConfiguration::from(vec![10, 15, 25]);
+        let conf12 = ServerConfiguration::from(vec![8, 17, 20]);
+        let conf21 = ServerConfiguration::from(vec![10, 15, 25]);
+        let conf22 = ServerConfiguration::from(vec![12, 17, 30]);
+        let mut schedule1 = Schedule::from(conf11);
         schedule1.append_config(conf12);
-        let mut schedule2 = Schedule::new_schedule(conf21);
+        let mut schedule2 = Schedule::from(conf21);
         schedule2.append_config(conf22);
         assert_eq!(14, schedule1.diff(&schedule2));
     }
     #[test]
     #[should_panic]
     fn schedule_diff_panics() {
-        let mut schedule1 = Schedule::new_schedule(vec![10]);
-        schedule1.append_config(vec![10]);
-        let schedule2 = Schedule::new_schedule(vec![10]);
+        let mut schedule1: Schedule = Schedule::from(ServerConfiguration::from(vec![10]));
+        schedule1.append_config(vec![10].into());
+        let schedule2 = Schedule::from(ServerConfiguration::from(vec![10]));
         schedule1.diff(&schedule2);
     }
     #[test]
     fn append_move_works() {
-        let mut schedule = Schedule::new_schedule(vec![10, 20]);
+        let mut schedule = Schedule::from(ServerConfiguration::from(vec![10, 20]));
         schedule.append_move(1, 30);
-        assert_eq!(0, config_diff(&schedule.last().unwrap(), &vec![10, 30]));
+        assert_eq!(
+            schedule.last().unwrap(),
+            &ServerConfiguration::from(vec![10, 30])
+        );
     }
 }

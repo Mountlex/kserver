@@ -1,7 +1,8 @@
+use crate::cost::CostMetric;
 use crate::instance::Instance;
 use crate::pred::Prediction;
 use crate::request::*;
-use crate::schedule::{Schedule, ScheduleCreation};
+use crate::schedule::Schedule;
 use crate::server_config::*;
 use std::cmp::min;
 
@@ -43,14 +44,14 @@ pub fn lambda_biased_dc(
 
 trait Algorithm {
     fn run(&self, instance: &Instance) -> (Schedule, u32) {
-        let mut schedule = Schedule::new_schedule(instance.initial_positions().to_vec());
+        let mut schedule = Schedule::from(instance.initial_positions().clone());
         let mut costs = 0;
 
         for (idx, &req) in instance.requests().into_iter().enumerate() {
             let current = schedule.last().unwrap();
             let (mut next, cost) = self.next_move(current, req, idx);
             costs += cost;
-            next.sort();
+            next.normalize();
             schedule.append_config(next);
         }
 
@@ -67,7 +68,7 @@ trait Algorithm {
 
 trait KTaxiAlgorithm {
     fn run(&self, instance: &Instance) -> (Schedule, u32) {
-        let mut schedule = Schedule::new_schedule(instance.initial_positions().to_vec());
+        let mut schedule = Schedule::from(instance.initial_positions().clone());
         let mut costs: u32 = 0;
 
         let mut active = 0;
@@ -79,7 +80,7 @@ trait KTaxiAlgorithm {
             active = new_active;
             if next[0] > next[1] {
                 active = 1 - active;
-                next.sort();
+                next.normalize();
             }
             schedule.append_config(next);
         }
@@ -106,7 +107,7 @@ impl Algorithm for DoubleCoverage {
         _req_idx: usize,
     ) -> (ServerConfiguration, u32) {
         let (left, right) = current.adjacent_servers(req);
-        let mut res = current.to_vec();
+        let mut res = current.clone();
         let pos = req.s;
         match (left, right) {
             (Some(i), Some(j)) => {
@@ -119,7 +120,7 @@ impl Algorithm for DoubleCoverage {
             }
             _ => panic!("Should not happened!"),
         }
-        let costs = config_diff(current, &res);
+        let costs = current.diff(&res);
         return (res, costs);
     }
 }
@@ -135,7 +136,7 @@ impl KTaxiAlgorithm for BiasedDC {
         _req_idx: usize,
     ) -> (usize, ServerConfiguration, u32) {
         let passive = 1 - active; // other server
-        let mut res = current.to_vec();
+        let mut res = current.clone();
         let pos = req.s;
 
         let mut cost: u32 = 0;
@@ -196,7 +197,7 @@ impl Algorithm for LambdaDC {
     ) -> (ServerConfiguration, u32) {
         let pos = req.s;
         let (left, right) = current.adjacent_servers(req);
-        let mut res = current.to_vec();
+        let mut res = current.clone();
         match (left, right) {
             (Some(i), Some(j)) => {
                 if i == j {
@@ -240,7 +241,7 @@ impl Algorithm for LambdaDC {
             }
             _ => panic!("Should not happen!"),
         }
-        let costs = config_diff(current, &res);
+        let costs = current.diff(&res);
         return (res, costs);
     }
 }
@@ -265,7 +266,7 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
         req_idx: usize,
     ) -> (usize, ServerConfiguration, u32) {
         let passive = 1 - active; // other server
-        let mut res = current.to_vec();
+        let mut res = current.clone();
         let pos = req.s;
 
         let mut cost = 0;
@@ -329,7 +330,7 @@ mod tests {
         let instance = Instance::from((vec![20, 80, 30, 70, 60, 50], vec![50, 50]));
         let dc = DoubleCoverage;
         assert_eq!(
-            vec![
+            Schedule::from(vec![
                 vec![50, 50],
                 vec![20, 50],
                 vec![20, 80],
@@ -337,7 +338,7 @@ mod tests {
                 vec![30, 70],
                 vec![40, 60],
                 vec![50, 50]
-            ],
+            ]),
             dc.run(&instance).0
         )
     }
@@ -348,13 +349,13 @@ mod tests {
         let pred = Prediction::from(vec![0, 1, 0, 1]);
         let alg = LambdaDC::new(pred, 0.5);
         assert_eq!(
-            vec![
+            Schedule::from(vec![
                 vec![50, 50],
                 vec![20, 50],
                 vec![20, 80],
                 vec![40, 70],
                 vec![43, 64],
-            ],
+            ]),
             alg.run(&instance).0
         )
     }
@@ -365,13 +366,13 @@ mod tests {
         let pred = Prediction::from(vec![0, 1, 0, 1]);
         let alg = LambdaDC::new(pred, 0.0);
         assert_eq!(
-            vec![
+            Schedule::from(vec![
                 vec![50, 50],
                 vec![20, 50],
                 vec![20, 80],
                 vec![40, 80],
                 vec![40, 64],
-            ],
+            ]),
             alg.run(&instance).0
         )
     }
@@ -381,13 +382,13 @@ mod tests {
         let instance = Instance::from((vec![(0, 0), (10, 0), (30, 30), (0, 0)], vec![0, 30]));
         let alg = BiasedDC;
         assert_eq!(
-            vec![
+            Schedule::from(vec![
                 vec![0, 30],
                 vec![0, 30],
                 vec![0, 10],
                 vec![10, 30],
                 vec![0, 25],
-            ],
+            ]),
             alg.run(&instance).0
         )
     }
@@ -398,13 +399,13 @@ mod tests {
         let pred = Prediction::from(vec![0, 0, 1, 0]);
         let alg = LambdaBiasedDC::new(pred, 1.0);
         assert_eq!(
-            vec![
+            Schedule::from(vec![
                 vec![0, 30],
                 vec![0, 30],
                 vec![0, 10],
                 vec![10, 30],
                 vec![0, 25],
-            ],
+            ]),
             alg.run(&instance).0
         )
     }
@@ -415,13 +416,13 @@ mod tests {
         let pred = Prediction::from(vec![0, 0, 1, 0]);
         let alg = LambdaBiasedDC::new(pred, 0.0);
         assert_eq!(
-            vec![
+            Schedule::from(vec![
                 vec![0, 30],
                 vec![0, 30],
                 vec![0, 20],
                 vec![0, 30],
                 vec![0, 30],
-            ],
+            ]),
             alg.run(&instance).0
         )
     }
@@ -432,13 +433,13 @@ mod tests {
         let pred = Prediction::from(vec![0, 0, 1, 0]);
         let alg = LambdaBiasedDC::new(pred, 0.5);
         assert_eq!(
-            vec![
+            Schedule::from(vec![
                 vec![0, 30],
                 vec![0, 30],
                 vec![0, 15],
                 vec![5, 30],
                 vec![0, 29],
-            ],
+            ]),
             alg.run(&instance).0
         )
     }
@@ -455,13 +456,13 @@ mod tests {
         println!("cost alg = {}", alg_sol.1);
         println!("cost opt = {}", opt_cost);
         assert_eq!(
-            vec![
+            Schedule::from(vec![
                 vec![10, 10],
                 vec![24, 38],
                 vec![76, 101],
                 vec![50, 131],
                 vec![33, 129]
-            ],
+            ]),
             alg_sol.0
         );
 

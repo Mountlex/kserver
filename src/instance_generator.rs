@@ -1,5 +1,6 @@
 use crate::instance::*;
 use crate::request::*;
+use crate::server_config::ServerConfiguration;
 use console::style;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use rand::distributions::{Distribution, Uniform};
@@ -197,7 +198,7 @@ fn load_instance(path: &path::Path, config: &InstanceConfig) -> Result<Instance,
 
     Ok(Instance::new(
         requests,
-        vec![initial_pos; config.number_of_servers],
+        ServerConfiguration::from(vec![initial_pos; config.number_of_servers]),
     ))
 }
 

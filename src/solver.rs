@@ -1,7 +1,6 @@
 use crate::instance::*;
 use crate::sample::*;
-use crate::schedule::{Schedule, ScheduleCreation};
-use crate::server_config::*;
+use crate::schedule::Schedule;
 use mcmf::*;
 use std::collections::HashMap;
 use std::error::Error;
@@ -68,7 +67,7 @@ impl Instance {
 }
 
 fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: &Instance) {
-    for (i, _) in instance.initial_positions().iter().enumerate() {
+    for (i, _) in instance.initial_positions().into_iter().enumerate() {
         graph.add_edge(
             Vertex::Source,
             VertexType::InitVertex(i),
@@ -86,7 +85,7 @@ fn add_source_and_init_vertices(graph: &mut GraphBuilder<VertexType>, instance: 
 
 fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &Instance) {
     for (i, x) in instance.requests().iter().enumerate() {
-        for (j, y) in instance.initial_positions().iter().enumerate() {
+        for (j, y) in instance.initial_positions().into_iter().enumerate() {
             graph.add_edge(
                 VertexType::InitVertex(j),
                 VertexType::FromVertex(i),
@@ -136,7 +135,7 @@ fn is_move_edge(v1: &Vertex<VertexType>, v2: &Vertex<VertexType>) -> Option<usiz
 }
 
 fn create_schedule(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> Schedule {
-    let mut schedule = Schedule::new_schedule(instance.initial_positions().to_vec());
+    let mut schedule = Schedule::from(instance.initial_positions().clone());
     // server index to request index
     let tuples: Vec<(usize, usize)> = paths
         .iter()
@@ -220,7 +219,7 @@ mod tests {
     #[test]
     fn solver_works() -> Result<(), Box<dyn Error>> {
         let instance = Instance::from((vec![38, 72, 183, 149, 135, 104], vec![32, 32]));
-        let solution = vec![
+        let solution = Schedule::from(vec![
             vec![32, 32],
             vec![32, 38],
             vec![32, 72],
@@ -228,7 +227,7 @@ mod tests {
             vec![32, 149],
             vec![32, 135],
             vec![32, 104],
-        ];
+        ]);
         assert_eq!(solution, instance.solve()?.0);
         Ok(())
     }
@@ -236,7 +235,7 @@ mod tests {
     #[test]
     fn solver_works2() -> Result<(), Box<dyn Error>> {
         let instance = Instance::from((vec![17, 17, 5, 14, 16, 17], vec![14, 14]));
-        let solution = vec![
+        let solution = Schedule::from(vec![
             vec![14, 14],
             vec![14, 17],
             vec![14, 17],
@@ -244,7 +243,7 @@ mod tests {
             vec![5, 14],
             vec![5, 16],
             vec![5, 17],
-        ];
+        ]);
         assert_eq!(solution, instance.solve()?.0);
         Ok(())
     }

@@ -1,5 +1,6 @@
 pub mod algorithm;
 pub mod cli;
+pub mod cost;
 pub mod export;
 pub mod instance;
 pub mod instance_generator;

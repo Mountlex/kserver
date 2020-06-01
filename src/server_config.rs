@@ -1,61 +1,27 @@
+use crate::cost::CostMetric;
 use crate::request::Request;
 
-pub type ServerConfiguration = Vec<i32>;
+#[derive(Debug, Clone, PartialEq, Hash)]
+pub struct ServerConfiguration(Vec<i32>);
 
-pub trait ServerConfig {
-    fn from_move(&self, id: usize, pos: i32) -> Self;
-
-    fn moved_server(&self, other: &Self) -> Option<usize>;
-
-    fn adjacent_servers(&self, req: Request) -> (Option<usize>, Option<usize>);
-}
-
-pub fn is_normalized(config: &ServerConfiguration) -> bool {
-    !config
-        .iter()
-        .zip(config.iter().skip(1))
-        .any(|(&a, &b)| a > b)
-}
-
-pub fn config_diff(config1: &ServerConfiguration, config2: &ServerConfiguration) -> u32 {
-    if config1.len() != config2.len() {
-        panic!("Server configurations must have same size!")
-    }
-    return config1
-        .iter()
-        .zip(config2.iter())
-        .map(|(a, b)| (a - b).abs())
-        .sum::<i32>() as u32;
-}
-
-impl ServerConfig for ServerConfiguration {
-    fn from_move(&self, id: usize, pos: i32) -> ServerConfiguration {
-        let mut new_pos = self.clone();
-        new_pos[id] = pos;
+impl ServerConfiguration {
+    pub fn from_move(&self, id: usize, pos: i32) -> ServerConfiguration {
+        let mut new_pos = ServerConfiguration(self.0.to_vec());
+        new_pos.0[id] = pos;
         return new_pos;
     }
 
-    fn moved_server(&self, other: &ServerConfiguration) -> Option<usize> {
-        if self.len() != other.len() {
-            return None;
-        }
-        let moved_servers: Vec<usize> = self
-            .iter()
-            .zip(other.iter())
-            .enumerate()
-            .filter(|(_, (a, b))| a != b)
-            .map(|(i, _)| i)
-            .collect();
-        if moved_servers.len() != 1 {
-            return None;
-        }
-        let res = moved_servers.first().cloned();
-        res
+    pub fn normalize(&mut self) {
+        self.0.sort();
     }
 
-    fn adjacent_servers(&self, req: Request) -> (Option<usize>, Option<usize>) {
+    pub fn size(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn adjacent_servers(&self, req: Request) -> (Option<usize>, Option<usize>) {
         let mut right_index: Option<usize> = None;
-        for (idx, &server) in self.iter().enumerate() {
+        for (idx, &server) in self.into_iter().enumerate() {
             if server >= req.s {
                 right_index = Some(idx);
                 break;
@@ -70,32 +36,72 @@ impl ServerConfig for ServerConfiguration {
                     (Some(right - 1), right_index)
                 }
             }
-            None => (Some(self.len() - 1), None),
+            None => (Some(self.size() - 1), None),
         }
+    }
+}
+
+impl CostMetric<u32> for ServerConfiguration {
+    fn diff(&self, other: &ServerConfiguration) -> u32 {
+        return self
+            .into_iter()
+            .zip(other.into_iter())
+            .map(|(a, b)| (a - b).abs())
+            .sum::<i32>() as u32;
+    }
+}
+
+impl From<Vec<i32>> for ServerConfiguration {
+    fn from(vec: Vec<i32>) -> ServerConfiguration {
+        ServerConfiguration(vec)
+    }
+}
+
+impl<'a> IntoIterator for &'a ServerConfiguration {
+    type Item = &'a i32;
+    type IntoIter = std::slice::Iter<'a, i32>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl IntoIterator for ServerConfiguration {
+    type Item = i32;
+    type IntoIter = std::vec::IntoIter<i32>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl std::ops::Index<usize> for ServerConfiguration {
+    type Output = i32;
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.0[idx]
+    }
+}
+
+impl std::ops::IndexMut<usize> for ServerConfiguration {
+    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
+        &mut self.0[idx]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn server_config_diff_works() {
-        let config1 = vec![10, 15, 25];
-        let config2 = vec![8, 17, 25];
-        assert_eq!(4, config_diff(&config1, &config2))
+        let config1: ServerConfiguration = vec![10, 15, 25].into();
+        let config2: ServerConfiguration = vec![8, 17, 25].into();
+        assert_eq!(4, config1.diff(&config2))
     }
-    #[test]
-    #[should_panic]
-    fn server_config_diff_panics() {
-        let config1 = vec![10, 15, 25];
-        let config2 = vec![8, 17, 25, 3];
-        config_diff(&config1, &config2);
-    }
+
     #[test]
     fn server_config_from_move_works() {
-        let config1 = vec![10, 15, 25];
+        let config1: ServerConfiguration = vec![10, 15, 25].into();
         let new_conf = config1.from_move(2, 30);
-        assert_eq!(vec![10, 15, 30], new_conf);
+        assert_eq!(ServerConfiguration::from(vec![10, 15, 30]), new_conf);
     }
 }

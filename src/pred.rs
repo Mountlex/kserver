@@ -1,6 +1,7 @@
+use crate::cost::CostMetric;
 use crate::instance::Instance;
 use crate::pred_generator::PredictionConfig;
-use crate::schedule::{CostMetric, Schedule};
+use crate::schedule::Schedule;
 use rand::distributions::{Distribution, Uniform};
 use rand::seq::SliceRandom;
 use std::error::Error;
@@ -64,12 +65,10 @@ impl IntoIterator for Prediction {
 
 impl Prediction {
     fn to_schedule(&self, instance: &Instance) -> Schedule {
-        let mut schedule = vec![instance.initial_positions().to_vec()];
+        let mut schedule = Schedule::from(instance.initial_positions().clone());
 
         for (idx, req) in instance.requests().iter().enumerate() {
-            let mut last = schedule.last().unwrap().to_vec();
-            last[self.0[idx]] = req.t;
-            schedule.push(last);
+            schedule.append_move(self.0[idx], req.t);
         }
 
         schedule
@@ -88,12 +87,12 @@ impl Prediction {
 // TODO
 pub fn to_prediction(schedule: &Schedule, instance: &Instance) -> Prediction {
     schedule
-        .iter()
+        .into_iter()
         .skip(1)
         .enumerate()
         .map(|(idx, config)| {
             config
-                .iter()
+                .into_iter()
                 .enumerate()
                 .find(|(_, &server)| server == instance.requests()[idx].t)
                 .map(|(i, _)| i)

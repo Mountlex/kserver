@@ -22,6 +22,15 @@ impl<'a> std::iter::IntoIterator for &'a Schedule {
     }
 }
 
+impl<'a> std::iter::IntoIterator for &'a mut Schedule {
+    type Item = &'a mut ServerConfiguration;
+    type IntoIter = std::slice::IterMut<'a, ServerConfiguration>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter_mut()
+    }
+}
+
 impl std::iter::FromIterator<ServerConfiguration> for Schedule {
     fn from_iter<I: IntoIterator<Item = ServerConfiguration>>(iter: I) -> Self {
         let mut c = Schedule::new();
@@ -82,6 +91,12 @@ impl Schedule {
                 let next_conf = config.from_move(id, position);
                 self.0.push(next_conf);
             }
+        }
+    }
+
+    pub fn normalize(&mut self) {
+        for config in self {
+            config.normalize();
         }
     }
 

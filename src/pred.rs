@@ -4,6 +4,7 @@ use crate::pred_generator::PredictionConfig;
 use crate::schedule::Schedule;
 use rand::distributions::{Distribution, Uniform};
 use rand::seq::SliceRandom;
+use rand::Rng;
 use std::error::Error;
 use std::fmt;
 use std::iter::FromIterator;
@@ -70,7 +71,7 @@ impl Prediction {
         for (idx, req) in instance.requests().iter().enumerate() {
             schedule.append_move(self.0[idx], req.t);
         }
-
+        schedule.normalize();
         schedule
     }
 
@@ -101,6 +102,15 @@ pub fn to_prediction(schedule: &Schedule, instance: &Instance) -> Prediction {
         .collect::<Prediction>()
 }
 
+/// Lower and upper inclusive
+fn predict(lower: usize, upper: usize) -> usize {
+    if lower == upper {
+        return lower;
+    }
+    let mut rng = rand::thread_rng();
+    rng.gen_range(lower, upper + 1)
+}
+
 pub fn generate_predictions(
     instance: &Instance,
     solution: &Schedule,
@@ -124,26 +134,27 @@ pub fn generate_predictions(
 
             let mut pred_vec = vec![];
             for (i, &server) in ref_perfect_prediction.0.iter().enumerate() {
+                let k = instance.k();
                 if correct_preds[i] {
                     pred_vec.push(server);
                 } else {
-                    if rand::random() {
+                    if rand::random::<bool>() {
                         // left
                         if server > 0 {
                             //left
-                            pred_vec.push(server - 1);
+                            pred_vec.push(predict(0, server - 1));
                         } else {
                             //right
-                            pred_vec.push(server + 1);
+                            pred_vec.push(predict(server + 1, k - 1));
                         }
                     } else {
                         // right
-                        if server < instance.k() - 1 {
+                        if server < k - 1 {
                             // right
-                            pred_vec.push(server + 1);
+                            pred_vec.push(predict(server + 1, k - 1));
                         } else {
                             // left
-                            pred_vec.push(server - 1);
+                            pred_vec.push(predict(0, server - 1));
                         }
                     }
                 }

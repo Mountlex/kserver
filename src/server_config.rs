@@ -51,7 +51,7 @@ use crate::request::Request;
 /// assert_eq!((Some(2), None), config.adjacent_servers(Request::from(12)));
 /// ```
 #[derive(Debug, Clone, PartialEq, Hash)]
-pub struct ServerConfiguration(Vec<i32>);
+pub struct ServerConfiguration(pub Vec<i32>);
 
 impl ServerConfiguration {
     pub fn new(positions: Vec<i32>) -> ServerConfiguration {

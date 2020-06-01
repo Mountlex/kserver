@@ -51,7 +51,7 @@ trait Algorithm {
             let current = schedule.last().unwrap();
             let (mut next, cost) = self.next_move(current, req, idx);
             costs += cost;
-            next.normalize();
+            //next.normalize();
             schedule.append_config(next);
         }
 
@@ -180,7 +180,7 @@ impl LambdaDC {
         //
         let d1 = (pos_pred - req).abs() as f32;
         let d2 = (pos_other - req).abs() as f32;
-        if d2 > self.lambda * d1 {
+        if d2 >= self.lambda * d1 {
             (d1, self.lambda * d1)
         } else {
             (d2 / self.lambda, d2)
@@ -197,23 +197,23 @@ impl Algorithm for LambdaDC {
     ) -> (ServerConfiguration, u32) {
         let pos = req.s;
         let (left, right) = current.adjacent_servers(req);
-        let mut res = current.clone();
+        let mut res = ServerConfiguration::from(current.0.to_vec());
         match (left, right) {
             (Some(i), Some(j)) => {
-                if i == j {
-                    res[i] = pos;
-                } else if i == j - 1 {
+                if i == j - 1 {
                     let predicted = self.prediction.get_predicted_server(req_idx);
+                    let fast_server = if predicted <= i { i } else { j };
                     if self.lambda == 0.0 {
-                        res[predicted] = pos;
+                        res[fast_server] = pos;
                     } else if self.lambda == 1.0 {
                         let d = min(current[j] - pos, pos - current[i]);
                         res[i] += d;
                         res[j] -= d;
                     } else {
-                        let other: usize = *[i, j].iter().find(|&x| *x != predicted).unwrap();
-                        let distances = self.get_distances(current[predicted], current[other], pos);
-                        if i == predicted {
+                        let other: usize = if fast_server == i { j } else { j };
+                        let distances =
+                            self.get_distances(current[fast_server], current[other], pos);
+                        if i == fast_server {
                             // left server
                             res[i] += distances.0.floor() as i32;
                             res[j] -= distances.1.floor() as i32;
@@ -223,6 +223,7 @@ impl Algorithm for LambdaDC {
                                 res[j] = pos;
                             }
                         } else {
+                            // j == fast_server
                             res[i] += distances.1.floor() as i32;
                             res[j] -= distances.0.floor() as i32;
                             // Fix rounding errors
@@ -232,8 +233,6 @@ impl Algorithm for LambdaDC {
                             }
                         }
                     }
-                } else {
-                    panic!("No adjacent servers are given!")
                 }
             }
             (Some(i), None) | (None, Some(i)) => {

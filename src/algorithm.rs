@@ -49,7 +49,7 @@ trait Algorithm {
 
         for (idx, &req) in instance.requests().into_iter().enumerate() {
             let current = schedule.last().unwrap();
-            let (mut next, cost) = self.next_move(current, req, idx);
+            let (next, cost) = self.next_move(current, req, idx);
             costs += cost;
             //next.normalize();
             schedule.append_config(next);

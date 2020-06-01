@@ -59,6 +59,11 @@ fn simulate_kserver(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, Simu
         .map(|pred| {
             let (_, alg_cost) = lambda_dc(&sample.instance, pred, lambda);
             let eta = pred.get_eta(&sample.solution, &sample.instance);
+            let k = sample.instance.k() as f32;
+            if alg_cost as f32 > (1.0 + (k - 1.0) * lambda) * (sample.opt_cost as f32 + 2.0 * eta as f32) {
+                println!("LambdaDC does not achieve the theoretical competitive ratio: {} > (1+{})({} + 2{})",
+                    alg_cost, lambda, sample.opt_cost, eta);
+            }            
             let res = SimResult {
                 instance: sample.instance.clone(),
                 opt_cost: sample.opt_cost,

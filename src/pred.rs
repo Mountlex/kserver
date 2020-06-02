@@ -40,7 +40,7 @@ impl PredictionError {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Prediction(Vec<usize>);
 
 impl From<Vec<usize>> for Prediction {
@@ -64,37 +64,31 @@ impl IntoIterator for Prediction {
     }
 }
 
+impl<'a> IntoIterator for &'a Prediction {
+    type Item = &'a usize;
+    type IntoIter = std::slice::Iter<'a, usize>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl std::ops::Index<usize> for Prediction {
+    type Output = usize;
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.0[idx]
+    }
+}
+
 impl Prediction {
     fn to_schedule(&self, instance: &Instance) -> Schedule {
         let mut schedule = Schedule::from(instance.initial_positions().clone());
 
         for (idx, req) in instance.requests().iter().enumerate() {
-            schedule.append_move(self.0[idx], req.t);
+            schedule.append_move(self[idx], req.t);
         }
+        //schedule.normalize();
         schedule
-
-        // for (idx, req) in instance.requests().iter().enumerate() {
-        //     let current = schedule.last().unwrap();
-        //     let (left, right) = current.adjacent_servers(req);
-        //     match (left, right) {
-        //         (Some(i), Some(j)) => {
-        //             if i == j - 1 {
-        //                 let predicted = self.0[idx];
-        //                 if predicted <= i {
-        //                     schedule.append_move(i, req.t);
-        //                 } else {
-        //                     schedule.append_move(j, req.t);
-        //                 }
-        //             } else {
-        //                 schedule.append_move(i, req.t);
-        //             }
-        //         }
-        //         (Some(i), None) | (None, Some(i)) => {
-        //             schedule.append_move(i, req.t);
-        //         }
-        //         (None, None) => panic!("Should not happen"),
-        //     }
-        // }
     }
 
     pub fn get_eta(&self, solution: &Schedule, instance: &Instance) -> f64 {
@@ -103,25 +97,26 @@ impl Prediction {
     }
 
     pub fn get_predicted_server(&self, request_index: usize) -> usize {
-        return self.0[request_index];
+        return self[request_index];
     }
 }
 
-// TODO
-pub fn to_prediction(schedule: &Schedule, instance: &Instance) -> Prediction {
-    schedule
+impl Schedule {
+    pub fn to_prediction(&self, instance: &Instance) -> Prediction {
+        self
         .into_iter()
         .skip(1)
         .enumerate()
         .map(|(idx, config)| {
             config
-                .into_iter()
-                .enumerate()
-                .find(|(_, &server)| server == instance[idx].t)
-                .map(|(i, _)| i)
-                .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!\nSolution={:?} Instance={}", schedule, instance))
+            .into_iter()
+            .enumerate()
+            .find(|(_, &server)| server == instance[idx].t)
+            .map(|(i, _)| i)
+            .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!\nSolution={:?} Instance={}", self, instance))
         })
         .collect::<Prediction>()
+    }
 }
 
 /// Lower and upper inclusive
@@ -142,8 +137,8 @@ pub fn generate_predictions(
     let mut step_to_predictions: Vec<Vec<Prediction>> =
         vec![vec![]; config.number_of_predictions as usize];
 
-    let perfect_prediction = to_prediction(solution, instance);
-    let ref_perfect_prediction = &to_prediction(solution, instance);
+    let perfect_prediction = solution.to_prediction(instance);
+    let ref_perfect_prediction = &solution.to_prediction(instance);
     step_to_predictions[0].push(perfect_prediction);
 
     let mut rng = rand::thread_rng();
@@ -160,24 +155,15 @@ pub fn generate_predictions(
                 if correct_preds[i] {
                     pred_vec.push(server);
                 } else {
-                    if rand::random::<bool>() {
-                        // left
-                        if server > 0 {
-                            //left
-                            pred_vec.push(server - 1);
+                    let p = predict(0, k - 1);
+                    if p == server {
+                        if p == 0 {
+                            pred_vec.push(p + 1);
                         } else {
-                            //right
-                            pred_vec.push(server + 1);
+                            pred_vec.push(p - 1);
                         }
                     } else {
-                        // right
-                        if server < k - 1 {
-                            // right
-                            pred_vec.push(server + 1);
-                        } else {
-                            // left
-                            pred_vec.push(server - 1);
-                        }
+                        pred_vec.push(p);
                     }
                 }
             }

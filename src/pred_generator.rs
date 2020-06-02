@@ -13,7 +13,7 @@ pub struct PredictionConfig {
     #[structopt(short = "b", long = "preds_bin_size", default_value = "0.25")]
     pub step_size: f32,
 
-    #[structopt(long = "preds_samples_per_round", default_value = "100")]
+    #[structopt(short = "s", long = "preds_samples_per_round", default_value = "200")]
     pub number_of_samples_per_round: usize,
 
     #[structopt(long = "max_preds_per_bin", default_value = "5")]

@@ -60,7 +60,7 @@ def plot_lambda(df, eta_res, args, det_alg, pred_alg):
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(ax=ax, linewidth=2,
-                                      style='--', label=f"{pred_alg} (Eta/Opt ={l:1.2f})", legend=True)
+                                      style='--', label=f"{pred_alg} (η/Opt ={l:1.2f})", legend=True)
 
     plt.plot((0, 1), (1, 1), 'black')
 
@@ -101,7 +101,7 @@ def plot_eta(df, eta_res, args, pred_alg):
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(
-            style='--', linewidth=2, label=f"{pred_alg} (Lambda = {l:1.2f})", legend=True)
+            style='--', linewidth=2, label=f"{pred_alg} (λ = {l:1.2f})", legend=True)
 
     plt.plot((0, max_bin), (1, 1), 'black')
     plt.xlabel('Eta / Opt')

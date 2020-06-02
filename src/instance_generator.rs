@@ -20,7 +20,7 @@ pub struct InstanceConfig {
 
     #[structopt(long = "min", default_value = "0")]
     pub min_value: i32,
-    #[structopt(long = "max", default_value = "2000")]
+    #[structopt(long = "max", default_value = "4000")]
     pub max_value: i32,
 }
 

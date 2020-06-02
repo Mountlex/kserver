@@ -17,8 +17,7 @@ use crate::request::Request;
 /// ```
 /// It can also directly be build using `new`:
 /// ```
-/// # use serversim::server_config::Server
-/// Configuration;
+/// # use serversim::server_config::ServerConfiguration;
 /// let config = ServerConfiguration::from(vec![1.0,4.0,7.0]);
 /// assert_eq!(3, config.size());
 /// ```

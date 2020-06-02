@@ -16,7 +16,7 @@ def create_arg_parser():
         description='Plot results from kserver simulation')
     parser.add_argument('sampleFile')
     parser.add_argument('-b', '--bin_size', default=0.25)
-    parser.add_argument('-l', '--lambdas', default=5, type=int)
+    parser.add_argument('-l', '--lambdas', default=6, type=int)
     parser.add_argument('-k', '--number_of_servers', default=2)
     parser.add_argument('--max', action='store_true')
 
@@ -60,7 +60,7 @@ def plot_lambda(df, eta_res, args, det_alg, pred_alg):
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(ax=ax, linewidth=2,
-                                      style='--', label=f"{pred_alg} (η/Opt ={l:1.2f})", legend=True)
+                                      style='--', label=f"{pred_alg} (η/Opt<={l:1.1f})", legend=True)
 
     plt.plot((0, 1), (1, 1), 'black')
 

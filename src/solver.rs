@@ -158,7 +158,7 @@ fn create_schedule(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> S
     //println!("Initial: {:?}", req_to_server);
     for (req_index, &req) in instance.requests().iter().enumerate() {
         let last_config = schedule.last().unwrap();
-        match last_config.adjacent_servers(req) {
+        match last_config.adjacent_servers(&req) {
             (Some(i), Some(j)) => {
                 if req_to_server[&req_index] < i {
                     //println!("< i: ({}, {})", i, j);

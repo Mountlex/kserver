@@ -71,8 +71,30 @@ impl Prediction {
         for (idx, req) in instance.requests().iter().enumerate() {
             schedule.append_move(self.0[idx], req.t);
         }
-        schedule.normalize();
         schedule
+
+        // for (idx, req) in instance.requests().iter().enumerate() {
+        //     let current = schedule.last().unwrap();
+        //     let (left, right) = current.adjacent_servers(req);
+        //     match (left, right) {
+        //         (Some(i), Some(j)) => {
+        //             if i == j - 1 {
+        //                 let predicted = self.0[idx];
+        //                 if predicted <= i {
+        //                     schedule.append_move(i, req.t);
+        //                 } else {
+        //                     schedule.append_move(j, req.t);
+        //                 }
+        //             } else {
+        //                 schedule.append_move(i, req.t);
+        //             }
+        //         }
+        //         (Some(i), None) | (None, Some(i)) => {
+        //             schedule.append_move(i, req.t);
+        //         }
+        //         (None, None) => panic!("Should not happen"),
+        //     }
+        // }
     }
 
     pub fn get_eta(&self, solution: &Schedule, instance: &Instance) -> f64 {
@@ -162,6 +184,12 @@ pub fn generate_predictions(
 
             let pred = Prediction::from(pred_vec);
             let pred_schedule = pred.to_schedule(instance);
+            // println!(
+            //     "Instance length {}, Solution length {}, Pred length {}",
+            //     instance.length(),
+            //     solution.size(),
+            //     pred.0.len()
+            // );
             let eta = solution.diff(&pred_schedule);
             let ratio = eta as f32 / opt_cost as f32;
             let bin_index: usize = (ratio / config.step_size).ceil() as usize;

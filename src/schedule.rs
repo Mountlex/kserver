@@ -94,6 +94,10 @@ impl Schedule {
         }
     }
 
+    pub fn size(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn normalize(&mut self) {
         for config in self {
             config.normalize();

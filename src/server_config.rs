@@ -44,11 +44,11 @@ use crate::request::Request;
 /// # use serversim::server_config::ServerConfiguration;
 /// # use serversim::request::Request;
 /// let config: ServerConfiguration = vec![1,5,10].into();
-/// assert_eq!((Some(0), Some(1)), config.adjacent_servers(Request::from(3)));
-/// assert_eq!((None, Some(0)), config.adjacent_servers(Request::from(-1)));
-/// assert_eq!((Some(1), Some(1)), config.adjacent_servers(Request::from(5)));
-/// assert_eq!((Some(2), Some(2)), config.adjacent_servers(Request::from(10)));
-/// assert_eq!((Some(2), None), config.adjacent_servers(Request::from(12)));
+/// assert_eq!((Some(0), Some(1)), config.adjacent_servers(&Request::from(3)));
+/// assert_eq!((None, Some(0)), config.adjacent_servers(&Request::from(-1)));
+/// assert_eq!((Some(1), Some(1)), config.adjacent_servers(&Request::from(5)));
+/// assert_eq!((Some(2), Some(2)), config.adjacent_servers(&Request::from(10)));
+/// assert_eq!((Some(2), None), config.adjacent_servers(&Request::from(12)));
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct ServerConfiguration(pub Vec<f32>);
@@ -72,7 +72,7 @@ impl ServerConfiguration {
         self.0.len()
     }
 
-    pub fn adjacent_servers(&self, req: Request) -> (Option<usize>, Option<usize>) {
+    pub fn adjacent_servers(&self, req: &Request) -> (Option<usize>, Option<usize>) {
         let mut right_index: Option<usize> = None;
         for (idx, &server) in self.into_iter().enumerate() {
             if server >= req.s {

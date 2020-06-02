@@ -48,12 +48,13 @@ trait Algorithm {
 
         for (idx, &req) in instance.requests().into_iter().enumerate() {
             let current = schedule.last().unwrap();
-            let (next, cost) = self.next_move(current, req, idx);
+            let (mut next, cost) = self.next_move(current, req, idx);
             costs += cost;
-            //next.normalize();
+            next.normalize();
             schedule.append_config(next);
         }
 
+        //println!("{:?}", schedule);
         (schedule, costs)
     }
 
@@ -105,12 +106,12 @@ impl Algorithm for DoubleCoverage {
         req: Request,
         _req_idx: usize,
     ) -> (ServerConfiguration, f64) {
-        let (left, right) = current.adjacent_servers(req);
-        let mut res = current.clone();
+        let (left, right) = current.adjacent_servers(&req);
+        let mut res = ServerConfiguration::from(current.0.to_vec());
         let pos = req.s;
         match (left, right) {
             (Some(i), Some(j)) => {
-                let d = min!(current[j] - pos, pos - current[i]);
+                let d = min!((current[j] - pos).abs(), (pos - current[i]).abs());
                 res[i] += d;
                 res[j] -= d;
             }
@@ -177,7 +178,7 @@ impl LambdaDC {
         //
         let d1 = (pos_pred - req).abs();
         let d2 = (pos_other - req).abs();
-        if d2 >= self.lambda * d1 {
+        if d2 > self.lambda * d1 {
             (d1, self.lambda * d1)
         } else {
             (d2 / self.lambda, d2)
@@ -193,18 +194,20 @@ impl Algorithm for LambdaDC {
         req_idx: usize,
     ) -> (ServerConfiguration, f64) {
         let pos = req.s;
-        let (left, right) = current.adjacent_servers(req);
+        let (left, right) = current.adjacent_servers(&req);
         let mut res = ServerConfiguration::from(current.0.to_vec());
         match (left, right) {
             (Some(i), Some(j)) => {
                 if i == j - 1 {
+                    assert!(current[i] < pos);
+                    assert!(current[j] > pos);
                     // neither i nor j are on the request
                     let predicted = self.prediction.get_predicted_server(req_idx);
                     let fast_server = if predicted <= i { i } else { j };
                     if self.lambda == 0.0 {
                         res[fast_server] = pos;
                     } else {
-                        let other: usize = if fast_server == i { j } else { j };
+                        let other: usize = if fast_server == i { j } else { i };
                         let (fast, slow) =
                             self.get_distances(current[fast_server], current[other], pos);
                         if i == fast_server {
@@ -226,7 +229,11 @@ impl Algorithm for LambdaDC {
                                 res[j] = pos;
                             }
                         }
+                        assert!(self.lambda < 1.0 || fast == slow);
+                        assert!(res[i] == pos || res[j] == pos);
                     }
+                } else {
+                    assert!(res[i] == pos);
                 }
             }
             (Some(i), None) | (None, Some(i)) => {
@@ -332,6 +339,11 @@ mod tests {
             ]),
             dc.run(&instance).0
         )
+    }
+    #[test]
+    fn test_min() {
+        assert_eq!(4, min!(4, 6));
+        assert_eq!(4.0, min!(4.0, 6.0));
     }
 
     #[test]

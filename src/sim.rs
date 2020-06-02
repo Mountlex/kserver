@@ -63,7 +63,13 @@ fn simulate_kserver(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, Simu
             if alg_cost as f64 > (1.0 + (k - 1.0) * lambda as f64) * (sample.opt_cost as f64 + 2.0 * eta as f64) {
                 println!("LambdaDC does not achieve the theoretical competitive ratio: {} > (1+{})({} + 2{})",
                     alg_cost, lambda, sample.opt_cost, eta);
-            }            
+            }    
+            if lambda == 0.0 && eta == 0.0 && alg_cost as f64 != sample.opt_cost as f64 {
+                println!("LambdaDC with lambda = eta = 0, but ALG = {} != {} = OPT", alg_cost, sample.opt_cost);
+            }  
+            if (alg_cost as f64) < sample.opt_cost as f64 {
+                println!("LambdaDC ALG = {} < {} = OPT", alg_cost, sample.opt_cost);
+            }         
             let res = SimResult {
                 instance: sample.instance.clone(),
                 opt_cost: sample.opt_cost,

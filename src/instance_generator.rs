@@ -172,7 +172,7 @@ fn load_instance(path: &path::Path, config: &InstanceConfig) -> Result<Instance,
         .lines()
         .filter_map(Result::ok)
         .filter_map(|line| line.parse::<f64>().ok())
-        .filter(|req| req > &0.0)
+        //.filter(|req| req > &0.0)
         .collect();
 
     raw_requests.dedup();

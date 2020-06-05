@@ -69,7 +69,7 @@ def plot_lambda(df, eta_res, args, det_alg, pred_alg):
     #plt.plot(x, robust(x), 'r', label='Robustness')
     plt.xlabel('Lambda')
     plt.ylabel('Empirical competitive ratio')
-    #plt.axis([0, 1, 0.9, 2.5])
+    #plt.axis([0, 1, 0.9, 1.1])
 
     if args.max:
         plt.title(
@@ -79,7 +79,7 @@ def plot_lambda(df, eta_res, args, det_alg, pred_alg):
             f"Simulation with {args.number_of_servers} servers (mean over all samples)")
 
     fig = plt.gcf()
-    plt.legend(loc="lower right",
+    plt.legend(loc="upper right",
                bbox_transform=fig.transFigure, ncol=2)
     fig.set_dpi(250)
     fig.set_size_inches(14, 8, forward=True)
@@ -106,7 +106,8 @@ def plot_eta(df, eta_res, args, pred_alg):
     plt.plot((0, max_bin), (1, 1), 'black')
     plt.xlabel('Eta / Opt')
     plt.ylabel('Empirical competitive ratio')
-    plt.legend(loc='lower right')
+    plt.legend(loc='upper right')
+    plt.axis([0, 22, 0.99, 1.1])
 
     if args.max:
         plt.title(

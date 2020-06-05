@@ -74,8 +74,12 @@ impl ServerConfiguration {
 
     pub fn adjacent_servers(&self, req: &Request) -> (Option<usize>, Option<usize>) {
         let mut right_index: Option<usize> = None;
+        let &pos = match req {
+            Request::Simple(x) => x,
+            Request::Relocation(x, _) => x,
+        };
         for (idx, &server) in self.into_iter().enumerate() {
-            if server >= req.s {
+            if server >= pos {
                 right_index = Some(idx);
                 break;
             }
@@ -83,11 +87,11 @@ impl ServerConfiguration {
         match right_index {
             Some(0) => (None, right_index),
             Some(right) => {
-                if self[right] == req.s {
+                if self[right] == pos {
                     (right_index, right_index)
                 } else {
-                    assert!(self[right] >= req.s);
-                    assert!(self[right - 1] <= req.s);
+                    assert!(self[right] >= pos);
+                    assert!(self[right - 1] <= pos);
                     (Some(right - 1), Some(right))
                 }
             }

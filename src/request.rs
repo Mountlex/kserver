@@ -10,65 +10,71 @@
 /// ```
 /// # use serversim::request::Request;
 /// let simple_req = Request::from(4);
-/// assert_eq!(4.0, simple_req.s);
-/// assert_eq!(4.0, simple_req.t);
-/// assert!(simple_req.is_simple());
+/// assert_eq!(Request::Simple(4.0), simple_req);
 /// let relocation_req = Request::from((2,4));
-/// assert_eq!(2.0, relocation_req.s);
-/// assert_eq!(4.0, relocation_req.t);
-/// assert!(!relocation_req.is_simple());
+/// assert_eq!(Request::Relocation(2.0, 4.0), relocation_req);
 /// ```
-#[derive(Copy, Clone, Debug)]
-pub struct Request {
-    pub s: f32,
-    pub t: f32,
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Request {
+    Simple(f32),
+    Relocation(f32, f32),
 }
 
 impl Request {
     pub fn is_simple(&self) -> bool {
-        self.s == self.t
+        matches!(*self, Request::Simple(_))
+    }
+
+    pub fn distance_to(&self, other: &f32) -> f32 {
+        match self {
+            Request::Simple(x) => (x - other).abs(),
+            Request::Relocation(_, y) => (y - other).abs(),
+        }
+    }
+    pub fn distance_to_req(&self, other: &Request) -> f32 {
+        let pos = other.distance_from(&0.0);
+        match self {
+            Request::Simple(x) => (x - pos).abs(),
+            Request::Relocation(_, y) => (y - pos).abs(),
+        }
+    }
+    pub fn distance_from(&self, other: &f32) -> f32 {
+        match self {
+            Request::Simple(x) => (x - other).abs(),
+            Request::Relocation(x, y) => (x - other).abs(),
+        }
     }
 }
 
 impl std::fmt::Display for Request {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        if self.s == self.t {
-            write!(f, "{}", self.s)
-        } else {
-            write!(f, "{}->{}", self.s, self.t)
+        match self {
+            Request::Simple(x) => write!(f, "{}", x),
+            Request::Relocation(x, y) => write!(f, "{}->{}", x, y),
         }
     }
 }
 
 impl From<f32> for Request {
     fn from(pos: f32) -> Self {
-        Request { s: pos, t: pos }
+        Request::Simple(pos)
     }
 }
 
 impl From<(f32, f32)> for Request {
     fn from(relocation: (f32, f32)) -> Self {
-        Request {
-            s: relocation.0,
-            t: relocation.1,
-        }
+        Request::Relocation(relocation.0, relocation.1)
     }
 }
 
 impl From<i32> for Request {
     fn from(pos: i32) -> Self {
-        Request {
-            s: pos as f32,
-            t: pos as f32,
-        }
+        Request::Simple(pos as f32)
     }
 }
 
 impl From<(i32, i32)> for Request {
     fn from(relocation: (i32, i32)) -> Self {
-        Request {
-            s: relocation.0 as f32,
-            t: relocation.1 as f32,
-        }
+        Request::Relocation(relocation.0 as f32, relocation.1 as f32)
     }
 }

@@ -108,10 +108,13 @@ impl Algorithm for DoubleCoverage {
     ) -> (ServerConfiguration, f64) {
         let (left, right) = current.adjacent_servers(&req);
         let mut res = ServerConfiguration::from(current.0.to_vec());
-        let pos = req.s;
+        let pos = req.distance_from(&0.0);
         match (left, right) {
             (Some(i), Some(j)) => {
-                let d = min!((current[j] - pos).abs(), (pos - current[i]).abs());
+                let d = min!(
+                    req.distance_from(&current[j]),
+                    req.distance_from(&current[i])
+                );
                 res[i] += d;
                 res[j] -= d;
             }
@@ -137,7 +140,10 @@ impl KTaxiAlgorithm for BiasedDC {
     ) -> (usize, ServerConfiguration, f64) {
         let passive = 1 - active; // other server
         let mut res = current.clone();
-        let pos = req.s;
+        let pos = match req {
+            Request::Simple(x) => x,
+            Request::Relocation(x, _) => x,
+        };
 
         let mut cost: f64 = 0.0;
         if res[active] != pos && res[passive] != pos {
@@ -159,7 +165,10 @@ impl KTaxiAlgorithm for BiasedDC {
             new_active = passive;
         }
 
-        res[new_active] = req.t;
+        res[new_active] = match req {
+            Request::Simple(x) => x,
+            Request::Relocation(_, x) => x,
+        };
         return (new_active, res, cost);
     }
 }
@@ -193,7 +202,10 @@ impl Algorithm for LambdaDC {
         req: Request,
         req_idx: usize,
     ) -> (ServerConfiguration, f64) {
-        let pos = req.s;
+        let pos = match req {
+            Request::Simple(x) => x,
+            Request::Relocation(x, _) => x,
+        };
         let (left, right) = current.adjacent_servers(&req);
         let mut res = ServerConfiguration::from(current.0.to_vec());
         match (left, right) {
@@ -267,7 +279,10 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
     ) -> (usize, ServerConfiguration, f64) {
         let passive = 1 - active; // other server
         let mut res = current.clone();
-        let pos = req.s;
+        let pos = match req {
+            Request::Simple(x) => x,
+            Request::Relocation(x, _) => x,
+        };
 
         let mut cost: f64 = 0.0;
         if res[active] != pos && res[passive] != pos {
@@ -312,7 +327,10 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
             new_active = passive;
         }
 
-        res[new_active] = req.t;
+        res[new_active] = match req {
+            Request::Simple(x) => x,
+            Request::Relocation(_, x) => x,
+        };
 
         return (new_active, res, cost);
     }

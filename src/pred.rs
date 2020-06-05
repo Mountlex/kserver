@@ -85,7 +85,7 @@ impl Prediction {
         let mut schedule = Schedule::from(instance.initial_positions().clone());
 
         for (idx, req) in instance.requests().iter().enumerate() {
-            schedule.append_move(self[idx], req.t);
+            schedule.append_move(self[idx], req.distance_to(&0.0));
         }
         //schedule.normalize();
         schedule
@@ -111,7 +111,7 @@ impl Schedule {
             config
             .into_iter()
             .enumerate()
-            .find(|(_, &server)| server == instance[idx].t)
+            .find(|(_, server)| instance[idx].distance_to(server) == 0.0)
             .map(|(i, _)| i)
             .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!\nSolution={:?} Instance={}", self, instance))
         })

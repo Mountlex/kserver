@@ -44,7 +44,7 @@ impl Instance {
     }
 
     pub fn is_taxi_instance(&self) -> bool {
-        self.requests().iter().any(|&req| req.s != req.t)
+        self.requests().iter().any(|&req| !req.is_simple())
     }
 }
 

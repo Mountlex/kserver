@@ -1,4 +1,5 @@
 use crate::instance::*;
+use crate::request::*;
 use crate::sample::*;
 use crate::schedule::Schedule;
 use mcmf::*;
@@ -90,7 +91,7 @@ fn add_request_verticies(graph: &mut GraphBuilder<VertexType>, instance: &Instan
                 VertexType::InitVertex(j),
                 VertexType::FromVertex(i),
                 Capacity(1),
-                Cost((x.s - y).abs() as i32),
+                Cost(x.distance_from(y) as i32),
             );
         }
         graph.add_edge(
@@ -107,12 +108,11 @@ fn add_request_edges(graph: &mut GraphBuilder<VertexType>, instance: &Instance) 
     for (i, x) in instance.requests().iter().enumerate() {
         for (j, y) in instance.requests().iter().enumerate() {
             if i < j {
-                let relocated_pos = x.t;
                 graph.add_edge(
                     VertexType::ToVertex(i),
                     VertexType::FromVertex(j),
                     Capacity(1),
-                    Cost((relocated_pos - y.s).abs() as i32),
+                    Cost(x.distance_to_req(y) as i32),
                 );
             }
         }
@@ -186,7 +186,13 @@ fn create_schedule(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> S
             }
             (None, None) => panic!("Something went wrong!"),
         }
-        let next_conf = last_config.from_move(req_to_server[&req_index], req.t);
+        let next_conf = last_config.from_move(
+            req_to_server[&req_index],
+            match req {
+                Request::Simple(x) => x,
+                Request::Relocation(_, x) => x,
+            },
+        );
         //next_conf.sort();
         schedule.append_config(next_conf);
     }

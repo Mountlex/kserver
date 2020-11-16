@@ -148,8 +148,8 @@ if __name__ == "__main__":
         data = get_data(parsed_args.sampleFile)
         plot_eta(data, float(parsed_args.bin_size),
                  parsed_args, pred_alg)
-        plot_lambda(data, float(parsed_args.bin_size),
-                    parsed_args, det_alg, pred_alg)
+        #plot_lambda(data, float(parsed_args.bin_size),
+        #            parsed_args, det_alg, pred_alg)
         plt.show()
     else:
         print("Path not valid!")

@@ -286,10 +286,12 @@ impl Algorithm for CombineDet {
         let mut bound = 1.0;
 
         let dc = DoubleCoverage;
-
-        for (idx, (&req, pred)) in instance.requests().into_iter().zip(self.prediction.clone().into_iter()).enumerate() {
-            ftp_costs += req.distance_from(&ftp_schedule.last().unwrap().0[pred]) as f64;
-            ftp_schedule.append_move(pred, *req.pos());
+        
+        for (idx, &req) in instance.requests().into_iter().enumerate() {
+            let ftp = LambdaDC::new(self.prediction.clone(), 0.0);
+            let (next, cost) = ftp.next_move(ftp_schedule.last().unwrap(), req, idx);
+            ftp_costs += cost;
+            ftp_schedule.append_config(next);
             
             let (next, cost) = dc.next_move(dc_schedule.last().unwrap(), req, idx);
             dc_costs += cost;

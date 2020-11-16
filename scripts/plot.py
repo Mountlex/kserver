@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 DETERMINISTIC_ALG_SERVER = "Double-Coverage"
 DETERMINISTIC_ALG_TAXI = "BiasedDC"
 ENHANCED_ALG_SERVER = "LDC"
+DET_COMBINE_ALG_SERVER = "Det_Combination"
 ENHANCED_ALG_TAXI = "LBDC"
 
 
@@ -28,6 +29,7 @@ def get_data(filename):
     #data = data.round(3)
     data['EtaOverOpt'] = data['Eta'] / data['OptCost']
     data['CRalg'] = data['AlgCost'] / data['OptCost']
+    data['CRcombine'] = data['CombineCost'] / data['OptCost']
     data['CRdc'] = data['DcCost'] / data['OptCost']
     return data
 
@@ -45,6 +47,7 @@ def plot_lambda(df, eta_res, args, det_alg, pred_alg):
     df[det_alg] = df['CRdc']
     # df = df[df['Bin'] < 10]
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
+    #dfCombine = df.loc[:, ['Lmbda', 'CRcombine', 'Bin']]
     dfDC = df.loc[:, ['Lmbda', det_alg]]
 
     if args.max:
@@ -57,6 +60,8 @@ def plot_lambda(df, eta_res, args, det_alg, pred_alg):
             ['Bin', 'Lmbda']).mean().unstack('Bin')
         ax = dfDC.groupby(['Lmbda']).mean().plot(
             label=det_alg, linewidth=2, legend=True)
+       # ax = dfCombine.groupby(['Lmbda']).mean().plot(ax=ax,
+       #     label="Det_Combine", linewidth=2, legend=True)
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(ax=ax, linewidth=2,
@@ -93,11 +98,17 @@ def plot_eta(df, eta_res, args, pred_alg):
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res) * eta_res
     max_bin = df['Bin'].max()
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
+    dfcombine = df.loc[:, ['CRcombine', 'Bin']]
+    dfdc = df.loc[:, ['CRdc', 'Bin']]
 
     if args.max:
         grouped_data = dfAlg.groupby(['Bin', 'Lmbda']).max().unstack('Lmbda')
+        ax = dfcombine.groupby(['Bin']).max().plot(label='Combine_det', linewidth=2, legend=True)
     else:
         grouped_data = dfAlg.groupby(['Bin', 'Lmbda']).mean().unstack('Lmbda')
+        ax = dfcombine.groupby(['Bin']).mean().plot(label='Combine_det', linewidth=2, legend=True)
+        ax = dfdc.groupby(['Bin']).mean().plot(ax=ax,label='DC', linewidth=2, legend=True)
+
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(
@@ -107,7 +118,7 @@ def plot_eta(df, eta_res, args, pred_alg):
     plt.xlabel('Eta / Opt')
     plt.ylabel('Empirical competitive ratio')
     plt.legend(loc='upper right')
-    plt.axis([0, 22, 0.99, 1.1])
+    #plt.axis([0, max_bin, 0.99, 1.1])
 
     if args.max:
         plt.title(

@@ -21,6 +21,13 @@ pub enum Request {
 }
 
 impl Request {
+    pub fn pos(&self) -> &f32 {
+        match self {
+            Request::Simple(x) => x,
+            Request::Relocation(x,_) => x,
+        }
+    }
+
     pub fn is_simple(&self) -> bool {
         matches!(*self, Request::Simple(_))
     }

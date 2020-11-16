@@ -27,6 +27,11 @@ pub fn lambda_dc(instance: &Instance, prediction: &Prediction, lambda: f32) -> (
     return alg.run(instance);
 }
 
+pub fn combine_det(instance: &Instance, prediction: &Prediction, gamma: f64) -> (Schedule, f64) {
+    let alg = CombineDet::new(prediction.clone(), gamma, false);
+    return alg.run(instance);
+}
+
 pub fn biased_dc(instance: &Instance) -> (Schedule, f64) {
     let bdc = BiasedDC;
     return bdc.run(instance);
@@ -255,6 +260,66 @@ impl Algorithm for LambdaDC {
         }
         let costs = current.diff(&res);
         return (res, costs);
+    }
+}
+
+struct CombineDet {
+    prediction: Prediction,
+    gamma: f64,
+    lazy: bool
+}
+
+impl CombineDet {
+    fn new(prediction: Prediction, gamma: f64, lazy: bool) -> CombineDet {
+        CombineDet { prediction, gamma, lazy }
+    }
+}
+
+impl Algorithm for CombineDet {
+    fn run(&self, instance: &Instance) -> (Schedule, f64) {
+        let mut schedule = Schedule::from(instance.initial_positions().clone());
+        let mut dc_schedule = Schedule::from(instance.initial_positions().clone());
+        let mut ftp_schedule = Schedule::from(instance.initial_positions().clone());
+        let mut dc_costs: f64 = 0.0;
+        let mut ftp_costs: f64 = 0.0;
+        let mut current_dc = false;
+        let mut bound = 1.0;
+
+        let dc = DoubleCoverage;
+
+        for (idx, (&req, pred)) in instance.requests().into_iter().zip(self.prediction.clone().into_iter()).enumerate() {
+            ftp_costs += req.distance_from(&ftp_schedule.last().unwrap().0[pred]) as f64;
+            ftp_schedule.append_move(pred, *req.pos());
+            
+            let (next, cost) = dc.next_move(dc_schedule.last().unwrap(), req, idx);
+            dc_costs += cost;
+            dc_schedule.append_config(next);
+
+            while (current_dc && dc_costs > bound) || (!current_dc && ftp_costs > bound) {
+                current_dc = !current_dc;
+                bound *= 1.0 + self.gamma;
+            }
+
+            if current_dc {
+                schedule.append_config(dc_schedule.last().unwrap().clone());
+            } else {
+                schedule.append_config(ftp_schedule.last().unwrap().clone());
+            }
+        }
+
+        let costs = schedule.cost();
+
+        //println!("{:?}", schedule);
+        (schedule, costs)
+    }
+
+    fn next_move(
+        &self,
+        current: &ServerConfiguration,
+        next_request: Request,
+        request_index: usize,
+    ) -> (ServerConfiguration, f64) {
+        (current.clone(), 0.0)
     }
 }
 

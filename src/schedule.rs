@@ -107,6 +107,18 @@ impl Schedule {
     pub fn last(&self) -> Option<&ServerConfiguration> {
         self.0.last()
     }
+
+    pub fn cost(&self) -> f64 {
+        if self.size() <= 1 {
+            0.0
+        } else {
+            let mut cost = 0.0;
+            for (from, to) in self.0.iter().take(self.0.len() - 1).zip(self.0.iter().skip(1)) {
+                cost += from.diff(to);
+            }
+            cost
+        }
+    }
 }
 
 #[cfg(test)]

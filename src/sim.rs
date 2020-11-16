@@ -58,6 +58,7 @@ fn simulate_kserver(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, Simu
         .iter()
         .map(|pred| {
             let (_, alg_cost) = lambda_dc(&sample.instance, pred, lambda);
+            let (_, combine_cost) = combine_det(&sample.instance, pred, 1.0);
             let eta = pred.get_eta(&sample.solution, &sample.instance);
             let k = sample.instance.k() as f64;
             if alg_cost as f64 > (1.0 + (k - 1.0) * lambda as f64) * (sample.opt_cost as f64 + 2.0 * eta as f64) {
@@ -76,6 +77,7 @@ fn simulate_kserver(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, Simu
                 eta,
                 dc_cost: dc_cost,
                 alg_cost: alg_cost,
+                combine_cost: combine_cost,
                 lambda: lambda,
             };
             res.into()
@@ -105,6 +107,7 @@ fn simulate_ktaxi(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, Simula
                 eta,
                 dc_cost: bdc_cost,
                 alg_cost: alg_cost,
+                combine_cost: 0.0,
                 lambda: lambda,
             };
             res.into()

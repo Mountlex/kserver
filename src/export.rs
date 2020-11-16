@@ -22,6 +22,7 @@ struct Record {
     eta: u64,
     optCost: u64,
     algCost: u64,
+    combineCost: u64,
     dcCost: u64,
 }
 
@@ -36,6 +37,7 @@ impl Record {
                 eta: sim_res.eta as u64,
                 optCost: sim_res.opt_cost as u64,
                 algCost: sim_res.alg_cost as u64,
+                combineCost: sim_res.combine_cost as u64,
                 dcCost: sim_res.dc_cost as u64,
             };
             return rec;

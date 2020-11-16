@@ -7,6 +7,7 @@ pub struct SimResult {
     pub eta: f64,
     pub dc_cost: f64,
     pub alg_cost: f64,
+    pub combine_cost: f64,
     pub lambda: f32,
 }
 

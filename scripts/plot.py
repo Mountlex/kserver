@@ -29,7 +29,7 @@ def get_data(filename):
     #data = data.round(3)
     data['EtaOverOpt'] = data['Eta'] / data['OptCost']
     data['CRalg'] = data['AlgCost'] / data['OptCost']
-    data['CRcombine'] = data['CombineCost'] / data['OptCost']
+    data['CombineDet'] = data['CombineCost'] / data['OptCost']
     data['CRdc'] = data['DcCost'] / data['OptCost']
     return data
 
@@ -47,7 +47,7 @@ def plot_lambda(df, eta_res, args, det_alg, pred_alg):
     df[det_alg] = df['CRdc']
     # df = df[df['Bin'] < 10]
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
-    #dfCombine = df.loc[:, ['Lmbda', 'CRcombine', 'Bin']]
+    #dfCombine = df.loc[:, ['Lmbda', 'CombineDet', 'Bin']]
     dfDC = df.loc[:, ['Lmbda', det_alg]]
 
     if args.max:
@@ -91,6 +91,7 @@ def plot_lambda(df, eta_res, args, det_alg, pred_alg):
     # fig.subplots_adjust(right=0.7)
 
 
+
 def plot_eta(df, eta_res, args, pred_alg):
     lambdas = list(np.linspace(0, 1, num=args.lambdas))
     lambdas = [round(l, 3) for l in lambdas]
@@ -98,7 +99,7 @@ def plot_eta(df, eta_res, args, pred_alg):
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res) * eta_res
     max_bin = df['Bin'].max()
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
-    dfcombine = df.loc[:, ['CRcombine', 'Bin']]
+    dfcombine = df.loc[:, ['CombineDet', 'Bin']]
     dfdc = df.loc[:, ['CRdc', 'Bin']]
 
     if args.max:
@@ -107,7 +108,6 @@ def plot_eta(df, eta_res, args, pred_alg):
     else:
         grouped_data = dfAlg.groupby(['Bin', 'Lmbda']).mean().unstack('Lmbda')
         ax = dfcombine.groupby(['Bin']).mean().plot(label='Combine_det', linewidth=2, legend=True)
-        ax = dfdc.groupby(['Bin']).mean().plot(ax=ax,label='DC', linewidth=2, legend=True)
 
 
     for label, l in list(grouped_data):

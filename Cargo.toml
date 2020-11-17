@@ -21,5 +21,7 @@ itertools-num = "0.1.3"
 csv = "1.1.3"
 serde = { version = "1", features = ["derive"] }
 log = "0.4.8"
+serverlib = { version = "^0.1.0", path="serverlib" }
+samplelib = { version = "^0.1.0", path="samplelib" }
 kserver = { version = "^0.1.0", path="kserver" }
-
+ktaxi = { version = "^0.1.0", path="ktaxi" }

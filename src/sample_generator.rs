@@ -1,7 +1,8 @@
-use kserver::prelude::Instance;
+use serverlib::prelude::Instance;
 
 use crate::pred_generator::{run_generate_predictions, PredictionConfig};
-use crate::sample::Sample;
+use samplelib::*;
+
 use crate::solver::SampleBuilder;
 use console::style;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};

@@ -1,6 +1,6 @@
-use kserver::prelude::*;
+use serverlib::prelude::*;
 
-use crate::sample::*;
+use samplelib::*;
 use mcmf::*;
 use std::collections::HashMap;
 use std::error::Error;

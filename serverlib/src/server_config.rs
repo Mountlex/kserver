@@ -61,6 +61,7 @@ impl ServerConfiguration {
     pub fn from_move(&self, id: usize, pos: f32) -> ServerConfiguration {
         let mut new_pos = ServerConfiguration(self.0.to_vec());
         new_pos.0[id] = pos;
+        new_pos.normalize();
         return new_pos;
     }
 

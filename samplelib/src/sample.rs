@@ -1,4 +1,5 @@
-use kserver::prelude::*;
+use serverlib::prelude::*;
+
 #[derive(Clone, Debug)]
 pub struct Sample {
     pub instance: Instance,

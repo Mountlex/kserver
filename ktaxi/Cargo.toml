@@ -1,5 +1,5 @@
 [package]
-name = "kserver"
+name = "ktaxi"
 version = "0.1.0"
 authors = ["Alexander Lindermayr <linderal@uni-bremen.de>"]
 edition = "2018"

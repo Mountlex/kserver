@@ -1,6 +1,7 @@
-use kserver::prelude::*;
+use serverlib::prelude::*;
 
-use crate::sample::Sample;
+use samplelib::*;
+
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::error::Error;
@@ -24,7 +25,11 @@ pub struct PredictionConfig {
     pub max_preds_per_round: usize,
 }
 
-impl Sample {
+trait PredictionAdder {
+    fn add_predictions(self, config: &PredictionConfig) -> Result<Sample, PredictionError>;
+}
+
+impl PredictionAdder for Sample {
     fn add_predictions(self, config: &PredictionConfig) -> Result<Sample, PredictionError> {
         match generate_predictions(&self.instance, &self.solution, self.opt_cost, config) {
             Ok(preds) => Ok(Sample {

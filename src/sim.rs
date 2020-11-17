@@ -1,6 +1,6 @@
-use crate::algorithm::*;
-use crate::results::SimResult;
-use crate::sample::Sample;
+use kserver::simulate_kserver;
+use ktaxi::simulate_ktaxi;
+use samplelib::*;
 use console::style;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use itertools_num::linspace;
@@ -51,77 +51,22 @@ impl Error for SimulatorError {
     }
 }
 
-fn simulate_kserver(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, SimulatorError> {
-    let dc_cost = double_coverage(&sample.instance).1;
-    let results = sample
-        .predictions
-        .iter()
-        .map(|pred| {
-            let (_, alg_cost) = lambda_dc(&sample.instance, pred, lambda);
-            let (_, combine_cost) = combine_det(&sample.instance, pred, 1.0);
-            let eta = pred.eta(&sample.solution, &sample.instance);
-            let k = sample.instance.k() as f64;
-            if alg_cost as f64 > (1.0 + (k - 1.0) * lambda as f64) * (sample.opt_cost as f64 + 2.0 * eta as f64) {
-                println!("LambdaDC does not achieve the theoretical competitive ratio: {} > (1+{})({} + 2{})",
-                    alg_cost, lambda, sample.opt_cost, eta);
-            }    
-            if lambda == 0.0 && eta == 0.0 && alg_cost as f64 != sample.opt_cost as f64 {
-                println!("LambdaDC with lambda = eta = 0, but ALG = {} != {} = OPT", alg_cost, sample.opt_cost);
-            }  
-            if (alg_cost as f64) < sample.opt_cost as f64 {
-                println!("LambdaDC ALG = {} < {} = OPT", alg_cost, sample.opt_cost);
-            }         
-            let res = SimResult {
-                instance: sample.instance.clone(),
-                opt_cost: sample.opt_cost,
-                eta,
-                dc_cost: dc_cost,
-                alg_cost: alg_cost,
-                combine_cost: combine_cost,
-                lambda: lambda,
-            };
-            res.into()
-        })
-        .collect::<Vec<SimResult>>();
-    Ok(results)
-}
 
-fn simulate_ktaxi(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, SimulatorError> {
-    let bdc = biased_dc(&sample.instance);
-    let bdc_cost = bdc.1;
-    if bdc_cost as f32 / sample.opt_cost as f32 > 9.0 {
-        println!(
-            "competitive ratio of biasedDC > 9: {}, BiasedDC={:?}, Opt={:?}",
-            sample.instance, bdc.0, sample.solution
-        );
-    }
-    let results = sample
-        .predictions
-        .iter()
-        .map(|pred| {
-            let (_, alg_cost) = lambda_biased_dc(&sample.instance, pred, lambda);
-            let eta = pred.eta(&sample.solution, &sample.instance);
-            let res = SimResult {
-                instance: sample.instance.clone(),
-                opt_cost: sample.opt_cost,
-                eta,
-                dc_cost: bdc_cost,
-                alg_cost: alg_cost,
-                combine_cost: 0.0,
-                lambda: lambda,
-            };
-            res.into()
-        })
-        .collect::<Vec<SimResult>>();
-    Ok(results)
-}
 
-impl Sample {
+trait Simulate {
     fn simulate(
-        self: &Sample,
+        &self,
         simulator: Simulators,
         lambda: f32,
-    ) -> Result<Vec<SimResult>, SimulatorError> {
+    ) -> Vec<SimResult>;
+}
+
+impl Simulate for Sample {
+    fn simulate(
+        &self,
+        simulator: Simulators,
+        lambda: f32,
+    ) -> Vec<SimResult> {
         match simulator {
             Simulators::KServer(_) => simulate_kserver(self, lambda),
             Simulators::KTaxi(_) => simulate_ktaxi(self, lambda),
@@ -129,7 +74,7 @@ impl Sample {
     }
 }
 
-pub fn run(samples: Vec<Sample>, simulator: Simulators) -> Result<Vec<SimResult>, Box<dyn Error>> {
+pub fn run(samples: Vec<Sample>, simulator: Simulators) -> Vec<SimResult> {
     println!("{}", style("Start simulating...").bold().cyan());
     let number_of_lambdas = match simulator {
         Simulators::KTaxi(config) => config.number_of_lambdas,
@@ -138,39 +83,36 @@ pub fn run(samples: Vec<Sample>, simulator: Simulators) -> Result<Vec<SimResult>
     let lambdas = linspace::<f32>(0., 1., number_of_lambdas)
         .into_iter()
         .collect::<Vec<f32>>();
-    let results = simulate_samples(samples, lambdas, simulator)?;
+    let results = simulate_samples(samples, lambdas, simulator);
     println!("{}", style("Simulation finished!").bold().green());
     println!(
         "{} {}",
         style("Number of results: ").bold().green(),
         style(results.len()).bold().red()
     );
-    Ok(results)
+    results
 }
 
 fn simulate_sample(
     sample: Sample,
     lambdas: &Vec<f32>,
     simulator: Simulators,
-) -> Result<Vec<SimResult>, SimulatorError> {
+) -> Vec<SimResult> {
     let results = lambdas
         .iter()
         .map(|lambda| sample.simulate(simulator, *lambda))
-        .filter_map(Result::ok)
         .flatten()
         .collect::<Vec<SimResult>>();
 
-    if results.iter().any(|res| res.is_invalid()) {
-        return Err(SimulatorError::new("Invalid result".to_string()));
-    }
-    return Ok(results);
+    
+    return results;
 }
 
 fn simulate_samples(
     samples: Vec<Sample>,
     lambdas: Vec<f32>,
     simulator: Simulators,
-) -> Result<Vec<SimResult>, Box<dyn Error>> {
+) -> Vec<SimResult> {
     let number_of_samples = samples.len();
     let pb = ProgressBar::new(number_of_samples as u64);
 
@@ -183,7 +125,6 @@ fn simulate_samples(
         .into_par_iter()
         .progress_with(pb)
         .map(|sample| simulate_sample(sample, &lambdas, simulator))
-        .filter_map(Result::ok)
         .collect::<Vec<Vec<SimResult>>>();
 
     let failed_simulations = number_of_samples - results.len();
@@ -195,5 +136,5 @@ fn simulate_samples(
         );
     }
     let res = results.into_iter().flatten().collect::<Vec<SimResult>>();
-    Ok(res)
+    res
 }

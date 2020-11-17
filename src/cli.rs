@@ -64,7 +64,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     let samples = sample_generator::run(instances, &cli.sample_config)?;
 
-    let results = sim::run(samples, simu)?;
+    let results = sim::run(samples, simu);
     export::run(results, &cli.export_config)?;
 
     Ok(())

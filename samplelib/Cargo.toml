@@ -1,5 +1,5 @@
 [package]
-name = "kserver"
+name = "samplelib"
 version = "0.1.0"
 authors = ["Alexander Lindermayr <linderal@uni-bremen.de>"]
 edition = "2018"
@@ -8,4 +8,3 @@ edition = "2018"
 
 [dependencies]
 serverlib = { version = "^0.1.0", path="../serverlib" }
-samplelib = { version = "^0.1.0", path="../samplelib" }

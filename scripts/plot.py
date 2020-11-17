@@ -28,9 +28,9 @@ def get_data(filename):
     data = pd.read_csv(filename)
     #data = data.round(3)
     data['EtaOverOpt'] = data['Eta'] / data['OptCost']
-    data['CRalg'] = data['AlgCost'] / data['OptCost']
-    data['CombineDet'] = data['CombineCost'] / data['OptCost']
-    data['CRdc'] = data['DcCost'] / data['OptCost']
+    data['CRalg'] = data['LDC'] / data['OptCost']
+    data['CombineDet'] = data['RobustFtp'] / data['OptCost']
+    data['CRdc'] = data['DC'] / data['OptCost']
     return data
 
 

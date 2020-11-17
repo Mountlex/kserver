@@ -30,7 +30,7 @@ pub fn run(results: Vec<SimResult>, config: &ExportConfig) -> Result<(), Box<dyn
             .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] ({percent}%)"),
     );
 
-    let mut headers = vec!["NumberOfServers, NumberOfRequests, Lmbda, Eta, OptCost"];
+    let mut headers = vec!["NumberOfServers", "NumberOfRequests", "Lmbda", "Eta", "OptCost"];
     if let Some(first) = results.first() {
         let mut cost_names = first.alg_costs.iter().map(|(name, _)| name.as_ref()).collect();
         headers.append(&mut cost_names);

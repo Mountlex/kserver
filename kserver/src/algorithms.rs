@@ -236,6 +236,7 @@ impl PredAlgorithm for CombineDet {
             }
         }
 
+        schedule.normalize();
         let costs = schedule.cost();
 
         //println!("{:?}", schedule);

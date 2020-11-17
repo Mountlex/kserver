@@ -107,7 +107,7 @@ impl Algorithm for DoubleCoverage {
         _req_idx: usize,
     ) -> (ServerConfiguration, f64) {
         let (left, right) = current.adjacent_servers(&req);
-        let mut res = ServerConfiguration::from(current.0.to_vec());
+        let mut res = current.clone();
         let pos = req.distance_from(&0.0);
         match (left, right) {
             (Some(i), Some(j)) => {
@@ -207,7 +207,7 @@ impl Algorithm for LambdaDC {
             Request::Relocation(x, _) => x,
         };
         let (left, right) = current.adjacent_servers(&req);
-        let mut res = ServerConfiguration::from(current.0.to_vec());
+        let mut res = current.clone();
         match (left, right) {
             (Some(i), Some(j)) => {
                 if i == j - 1 {

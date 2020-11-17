@@ -37,7 +37,7 @@ impl PredictionError {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct Prediction(pub Vec<usize>);
+pub struct Prediction(Vec<usize>);
 
 impl From<Vec<usize>> for Prediction {
     fn from(servers: Vec<usize>) -> Prediction {

@@ -90,7 +90,7 @@ pub fn generate_predictions(
             (1..number_of_wrong_servers).for_each(|_| correct_preds[dist.sample(&mut rng)] = false);
 
             let mut pred_vec = vec![];
-            for (i, &server) in ref_perfect_prediction.0.iter().enumerate() {
+            for (i, &server) in ref_perfect_prediction.into_iter().enumerate() {
                 let k = instance.k();
                 if correct_preds[i] {
                     pred_vec.push(server);

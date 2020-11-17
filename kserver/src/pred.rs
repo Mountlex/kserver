@@ -1,7 +1,6 @@
 use crate::cost::CostMetric;
 use crate::instance::Instance;
 use crate::schedule::Schedule;
-use rand::Rng;
 use std::error::Error;
 use std::fmt;
 use std::iter::FromIterator;
@@ -79,7 +78,7 @@ impl std::ops::Index<usize> for Prediction {
 
 impl Prediction {
     pub fn to_schedule(&self, instance: &Instance) -> Schedule {
-        let mut schedule = Schedule::from(instance.initial_positions().clone());
+        let mut schedule = Schedule::with_initial_config(instance.initial_positions().clone());
 
         for (idx, req) in instance.requests().iter().enumerate() {
             schedule.append_move(self[idx], req.distance_to(&0.0));
@@ -88,31 +87,13 @@ impl Prediction {
         schedule
     }
 
-    pub fn get_eta(&self, solution: &Schedule, instance: &Instance) -> f64 {
+    pub fn eta(&self, solution: &Schedule, instance: &Instance) -> f64 {
         let pred_schedule = self.to_schedule(instance);
         return solution.diff(&pred_schedule);
     }
 
-    pub fn get_predicted_server(&self, request_index: usize) -> usize {
+    pub fn predicted_server(&self, request_index: usize) -> usize {
         return self[request_index];
-    }
-}
-
-impl Schedule {
-    pub fn to_prediction(&self, instance: &Instance) -> Prediction {
-        self
-        .into_iter()
-        .skip(1)
-        .enumerate()
-        .map(|(idx, config)| {
-            config
-            .into_iter()
-            .enumerate()
-            .find(|(_, server)| instance[idx].distance_to(server) == 0.0)
-            .map(|(i, _)| i)
-            .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!\nSolution={:?} Instance={}", self, instance))
-        })
-        .collect::<Prediction>()
     }
 }
 

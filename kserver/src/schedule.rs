@@ -1,8 +1,76 @@
 use crate::cost::CostMetric;
 use crate::server_config::ServerConfiguration;
+use crate::pred::Prediction;
+use crate::instance::Instance;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Schedule(Vec<ServerConfiguration>);
+
+impl Schedule {
+    pub fn empty() -> Schedule {
+        Schedule(Vec::new())
+    }
+
+    pub fn with_initial_config(initial_config: ServerConfiguration) -> Self {
+        Schedule(vec![initial_config])
+    }
+
+    pub fn append_config(&mut self, config: ServerConfiguration) {
+        self.0.push(config);
+    }
+
+    pub fn append_move(&mut self, id: usize, position: f32) {
+        match self.0.last() {
+            None => println!("Cannot append move as there is no initial configuration!"),
+            Some(config) => {
+                let next_conf = config.from_move(id, position);
+                self.0.push(next_conf);
+            }
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn normalize(&mut self) {
+        for config in self {
+            config.normalize();
+        }
+    }
+
+    pub fn last(&self) -> Option<&ServerConfiguration> {
+        self.0.last()
+    }
+
+    pub fn cost(&self) -> f64 {
+        if self.len() <= 1 {
+            0.0
+        } else {
+            let mut cost = 0.0;
+            for (from, to) in self.0.iter().take(self.0.len() - 1).zip(self.0.iter().skip(1)) {
+                cost += from.diff(to);
+            }
+            cost
+        }
+    }
+
+    pub fn to_prediction(&self, instance: &Instance) -> Prediction {
+        self
+        .into_iter()
+        .skip(1)
+        .enumerate()
+        .map(|(idx, config)| {
+            config
+            .into_iter()
+            .enumerate()
+            .find(|(_, server)| instance[idx].distance_to(server) == 0.0)
+            .map(|(i, _)| i)
+            .unwrap_or_else(|| panic!("Cannot find predicted server. Please investigate!\nSolution={:?} Instance={}", self, instance))
+        })
+        .collect::<Prediction>()
+    }
+}
 
 impl std::iter::IntoIterator for Schedule {
     type Item = ServerConfiguration;
@@ -33,30 +101,11 @@ impl<'a> std::iter::IntoIterator for &'a mut Schedule {
 
 impl std::iter::FromIterator<ServerConfiguration> for Schedule {
     fn from_iter<I: IntoIterator<Item = ServerConfiguration>>(iter: I) -> Self {
-        let mut c = Schedule::new();
+        let mut c = Schedule::empty();
         for i in iter {
             c.append_config(i);
         }
         c
-    }
-}
-
-impl CostMetric<f64> for Schedule {
-    fn diff(&self, other: &Self) -> f64 {
-        if self.0.len() != other.0.len() {
-            panic!("Schedules must have same size!")
-        }
-        return self
-            .into_iter()
-            .zip(other.into_iter())
-            .map(|(c1, c2)| c1.diff(c2) as f64)
-            .sum();
-    }
-}
-
-impl From<ServerConfiguration> for Schedule {
-    fn from(initial_config: ServerConfiguration) -> Self {
-        Schedule(vec![initial_config])
     }
 }
 
@@ -72,52 +121,6 @@ impl From<Vec<Vec<i32>>> for Schedule {
             .into_iter()
             .map(|vec| ServerConfiguration::from(vec))
             .collect()
-    }
-}
-
-impl Schedule {
-    pub fn new() -> Schedule {
-        Schedule(Vec::new())
-    }
-
-    pub fn append_config(&mut self, config: ServerConfiguration) {
-        self.0.push(config);
-    }
-
-    pub fn append_move(&mut self, id: usize, position: f32) {
-        match self.0.last() {
-            None => println!("Cannot append move as there is no initial configuration!"),
-            Some(config) => {
-                let next_conf = config.from_move(id, position);
-                self.0.push(next_conf);
-            }
-        }
-    }
-
-    pub fn size(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn normalize(&mut self) {
-        for config in self {
-            config.normalize();
-        }
-    }
-
-    pub fn last(&self) -> Option<&ServerConfiguration> {
-        self.0.last()
-    }
-
-    pub fn cost(&self) -> f64 {
-        if self.size() <= 1 {
-            0.0
-        } else {
-            let mut cost = 0.0;
-            for (from, to) in self.0.iter().take(self.0.len() - 1).zip(self.0.iter().skip(1)) {
-                cost += from.diff(to);
-            }
-            cost
-        }
     }
 }
 

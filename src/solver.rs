@@ -146,7 +146,7 @@ fn is_move_edge(v1: &Vertex<VertexType>, v2: &Vertex<VertexType>) -> Option<usiz
 }
 
 fn create_schedule(paths: Vec<mcmf::Path<VertexType>>, instance: &Instance) -> Schedule {
-    let mut schedule = Schedule::from(instance.initial_positions().clone());
+    let mut schedule = Schedule::with_initial_config(instance.initial_positions().clone());
     // server index to request index
     let tuples: Vec<(usize, usize)> = paths
         .iter()

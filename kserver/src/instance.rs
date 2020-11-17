@@ -33,7 +33,7 @@ impl Instance {
     pub fn k(&self) -> usize {
         self.initial_positions.size()
     }
-    pub fn requests(&self) -> &Vec<Request> {
+    pub fn requests(&self) -> &[Request] {
         &self.requests
     }
     pub fn initial_positions(&self) -> &ServerConfiguration {

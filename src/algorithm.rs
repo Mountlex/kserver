@@ -43,7 +43,7 @@ pub fn lambda_biased_dc(
 
 trait Algorithm {
     fn run(&self, instance: &Instance) -> (Schedule, f64) {
-        let mut schedule = Schedule::from(instance.initial_positions().clone());
+        let mut schedule = Schedule::with_initial_config(instance.initial_positions().clone());
         let mut costs: f64 = 0.0;
 
         for (idx, &req) in instance.requests().into_iter().enumerate() {
@@ -68,7 +68,7 @@ trait Algorithm {
 
 trait KTaxiAlgorithm {
     fn run(&self, instance: &Instance) -> (Schedule, f64) {
-        let mut schedule = Schedule::from(instance.initial_positions().clone());
+        let mut schedule = Schedule::with_initial_config(instance.initial_positions().clone());
         let mut costs: f64 = 0.0;
 
         let mut active = 0;
@@ -214,7 +214,7 @@ impl Algorithm for LambdaDC {
                     assert!(current[i] < pos);
                     assert!(current[j] > pos);
                     // neither i nor j are on the request
-                    let predicted = self.prediction.get_predicted_server(req_idx);
+                    let predicted = self.prediction.predicted_server(req_idx);
                     let fast_server = if predicted <= i { i } else { j };
                     if self.lambda == 0.0 {
                         res[fast_server] = pos;
@@ -272,9 +272,9 @@ impl CombineDet {
 
 impl Algorithm for CombineDet {
     fn run(&self, instance: &Instance) -> (Schedule, f64) {
-        let mut schedule = Schedule::from(instance.initial_positions().clone());
-        let mut dc_schedule = Schedule::from(instance.initial_positions().clone());
-        let mut ftp_schedule = Schedule::from(instance.initial_positions().clone());
+        let mut schedule = Schedule::with_initial_config(instance.initial_positions().clone());
+        let mut dc_schedule = Schedule::with_initial_config(instance.initial_positions().clone());
+        let mut ftp_schedule = Schedule::with_initial_config(instance.initial_positions().clone());
         let mut dc_costs: f64 = 0.0;
         let mut ftp_costs: f64 = 0.0;
         let mut current_dc = false;
@@ -348,7 +348,7 @@ impl KTaxiAlgorithm for LambdaBiasedDC {
 
         let mut cost: f64 = 0.0;
         if res[active] != pos && res[passive] != pos {
-            let predicted = self.prediction.get_predicted_server(req_idx);
+            let predicted = self.prediction.predicted_server(req_idx);
 
             let dp: f32;
             let da: f32;

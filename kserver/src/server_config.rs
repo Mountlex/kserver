@@ -1,4 +1,3 @@
-use crate::cost::CostMetric;
 use crate::request::Request;
 
 /// Represents a state of the servers on the line.algorithm
@@ -54,7 +53,8 @@ use crate::request::Request;
 pub struct ServerConfiguration(pub Vec<f32>);
 
 impl ServerConfiguration {
-    pub fn new(positions: Vec<f32>) -> ServerConfiguration {
+    pub fn new(mut positions: Vec<f32>) -> ServerConfiguration {
+        positions.sort_by(|a, b| a.partial_cmp(b).unwrap());
         ServerConfiguration(positions)
     }
 
@@ -100,15 +100,7 @@ impl ServerConfiguration {
     }
 }
 
-impl CostMetric<f64> for ServerConfiguration {
-    fn diff(&self, other: &ServerConfiguration) -> f64 {
-        return self
-            .into_iter()
-            .zip(other.into_iter())
-            .map(|(a, b)| (a - b).abs() as f64)
-            .sum::<f64>();
-    }
-}
+
 
 impl From<Vec<f32>> for ServerConfiguration {
     fn from(vec: Vec<f32>) -> ServerConfiguration {

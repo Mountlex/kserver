@@ -48,7 +48,7 @@ impl Request {
     pub fn distance_from(&self, other: &f32) -> f32 {
         match self {
             Request::Simple(x) => (x - other).abs(),
-            Request::Relocation(x, y) => (x - other).abs(),
+            Request::Relocation(x, _) => (x - other).abs(),
         }
     }
 }

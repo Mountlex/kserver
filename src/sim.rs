@@ -59,7 +59,7 @@ fn simulate_kserver(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, Simu
         .map(|pred| {
             let (_, alg_cost) = lambda_dc(&sample.instance, pred, lambda);
             let (_, combine_cost) = combine_det(&sample.instance, pred, 1.0);
-            let eta = pred.get_eta(&sample.solution, &sample.instance);
+            let eta = pred.eta(&sample.solution, &sample.instance);
             let k = sample.instance.k() as f64;
             if alg_cost as f64 > (1.0 + (k - 1.0) * lambda as f64) * (sample.opt_cost as f64 + 2.0 * eta as f64) {
                 println!("LambdaDC does not achieve the theoretical competitive ratio: {} > (1+{})({} + 2{})",
@@ -100,7 +100,7 @@ fn simulate_ktaxi(sample: &Sample, lambda: f32) -> Result<Vec<SimResult>, Simula
         .iter()
         .map(|pred| {
             let (_, alg_cost) = lambda_biased_dc(&sample.instance, pred, lambda);
-            let eta = pred.get_eta(&sample.solution, &sample.instance);
+            let eta = pred.eta(&sample.solution, &sample.instance);
             let res = SimResult {
                 instance: sample.instance.clone(),
                 opt_cost: sample.opt_cost,

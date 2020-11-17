@@ -1,9 +1,4 @@
-use crate::cost::CostMetric;
-use crate::instance::Instance;
-use crate::pred::Prediction;
-use crate::request::*;
-use crate::schedule::Schedule;
-use crate::server_config::*;
+use kserver::prelude::*;
 
 macro_rules! min {
     ($x: expr) => ($x);

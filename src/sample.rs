@@ -1,7 +1,4 @@
-use crate::instance::Instance;
-use crate::pred::Prediction;
-use crate::schedule::Schedule;
-
+use kserver::prelude::*;
 #[derive(Clone, Debug)]
 pub struct Sample {
     pub instance: Instance,

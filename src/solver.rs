@@ -1,7 +1,6 @@
-use crate::instance::*;
-use crate::request::*;
+use kserver::prelude::*;
+
 use crate::sample::*;
-use crate::schedule::Schedule;
 use mcmf::*;
 use std::collections::HashMap;
 use std::error::Error;
@@ -48,8 +47,12 @@ impl SolverError {
 
 const COST_CONST: i32 = -100000;
 
-impl Instance {
-    pub fn solve(self: &Instance) -> Result<(Schedule, u32), SolverError> {
+pub trait Solver {
+    fn solve(&self) -> Result<(Schedule, u32), SolverError>;
+}
+
+impl Solver for Instance {
+    fn solve(&self) -> Result<(Schedule, u32), SolverError> {
         let mut graph = GraphBuilder::new();
         add_source_and_init_vertices(&mut graph, self);
         add_request_verticies(&mut graph, self);
@@ -61,7 +64,15 @@ impl Instance {
         return Ok((schedule, fixed_costs as u32));
     }
 
-    pub fn build_sample(self: Instance) -> Result<Sample, SolverError> {
+    
+}
+
+pub trait SampleBuilder {
+    fn build_sample(self) -> Result<Sample, SolverError>;
+}
+
+impl SampleBuilder for Instance {
+    fn build_sample(self) -> Result<Sample, SolverError> {
         let (solution, costs) = self.solve()?;
         Ok(Sample::new(self, solution, costs))
     }

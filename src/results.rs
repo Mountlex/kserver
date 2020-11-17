@@ -1,4 +1,5 @@
-use crate::instance::Instance;
+use kserver::prelude::Instance;
+
 
 #[derive(Clone, Debug)]
 pub struct SimResult {

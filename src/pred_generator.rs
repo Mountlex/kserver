@@ -3,12 +3,12 @@ use serverlib::prelude::*;
 use samplelib::*;
 
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use rand::distributions::{Distribution, Uniform};
+use rand::prelude::SliceRandom;
+use rand::Rng;
 use rayon::prelude::*;
 use std::error::Error;
 use structopt::StructOpt;
-use rand::distributions::{Uniform, Distribution};
-use rand::prelude::SliceRandom;
-use rand::Rng;
 
 #[derive(StructOpt, Debug)]
 pub struct PredictionConfig {
@@ -21,8 +21,8 @@ pub struct PredictionConfig {
     #[structopt(short = "s", long = "preds_samples_per_round", default_value = "200")]
     pub number_of_samples_per_round: usize,
 
-    #[structopt(long = "max_preds_per_bin", default_value = "5")]
-    pub max_preds_per_round: usize,
+    #[structopt(short = "m", long = "preds_per_bin", default_value = "3")]
+    pub preds_per_bin: usize,
 }
 
 trait PredictionAdder {
@@ -70,8 +70,6 @@ fn predict(lower: usize, upper: usize) -> usize {
     let mut rng = rand::thread_rng();
     rng.gen_range(lower, upper + 1)
 }
-
-
 
 pub fn generate_predictions(
     instance: &Instance,
@@ -125,18 +123,22 @@ pub fn generate_predictions(
             let ratio = eta as f32 / opt_cost as f32;
             let bin_index: usize = (ratio / config.step_size).ceil() as usize;
 
-            if bin_index < config.number_of_predictions
-                && step_to_predictions[bin_index].len() < config.max_preds_per_round
-            {
+            if bin_index < config.number_of_predictions {
                 step_to_predictions[bin_index].push(pred);
             }
 
-            if !step_to_predictions.iter().any(|preds| preds.is_empty()) {
+            if !step_to_predictions
+                .iter()
+                .any(|preds| preds.len() < config.preds_per_bin)
+            {
                 break;
             }
         }
 
-        if !step_to_predictions.iter().any(|preds| preds.is_empty()) {
+        if !step_to_predictions
+            .iter()
+            .any(|preds| preds.len() < config.preds_per_bin)
+        {
             break;
         }
     }
@@ -163,7 +165,13 @@ pub fn generate_predictions(
     } else {
         Ok(step_to_predictions
             .into_iter()
-            .map(|preds| preds.choose(&mut rng).unwrap().clone())
+            .map(|preds| {
+                preds
+                    .choose_multiple(&mut rng, config.preds_per_bin)
+                    .cloned()
+                    .collect::<Vec<Prediction>>()
+            })
+            .flatten()
             .collect())
     }
 }

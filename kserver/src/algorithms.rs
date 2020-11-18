@@ -12,14 +12,17 @@ macro_rules! min {
     }}
 }
 
-pub fn learning_augmented_alg<A: PredAlgorithm>(alg: A, instance: &Instance, prediction: &Prediction) -> (Schedule, f64) {
+pub fn learning_augmented_alg<A: PredAlgorithm>(
+    alg: A,
+    instance: &Instance,
+    prediction: &Prediction,
+) -> (Schedule, f64) {
     alg.run(instance, prediction)
 }
 
 pub fn deterministic_alg<A: DetAlgorithm>(alg: A, instance: &Instance) -> (Schedule, f64) {
     alg.run_det(instance)
 }
-
 
 pub trait DetAlgorithm {
     fn run_det(&self, instance: &Instance) -> (Schedule, f64) {
@@ -66,12 +69,17 @@ pub trait PredAlgorithm {
         &self,
         current: &ServerConfiguration,
         next_request: Request,
-        prediction: usize
+        prediction: usize,
     ) -> (ServerConfiguration, f64);
 }
 
-impl <T: DetAlgorithm> PredAlgorithm for T {
-    fn next_move(&self, current: &ServerConfiguration, next_request: Request, _: usize) -> (ServerConfiguration, f64) {
+impl<T: DetAlgorithm> PredAlgorithm for T {
+    fn next_move(
+        &self,
+        current: &ServerConfiguration,
+        next_request: Request,
+        _: usize,
+    ) -> (ServerConfiguration, f64) {
         self.next_det_move(current, next_request)
     }
 }
@@ -105,8 +113,6 @@ impl DetAlgorithm for DoubleCoverage {
         return (res, costs);
     }
 }
-
-
 
 pub struct LambdaDC {
     lambda: f32,
@@ -148,7 +154,7 @@ impl PredAlgorithm for LambdaDC {
                     assert!(current[i] < pos);
                     assert!(current[j] > pos);
                     // neither i nor j are on the request
-                   
+
                     let fast_server = if predicted <= i { i } else { j };
                     if self.lambda == 0.0 {
                         res[fast_server] = pos;
@@ -198,12 +204,13 @@ pub struct CombineDet {
 
 impl CombineDet {
     pub fn new(gamma: f64) -> CombineDet {
-        CombineDet {gamma }
+        CombineDet { gamma }
     }
 }
 
 impl PredAlgorithm for CombineDet {
     fn run(&self, instance: &Instance, prediction: &Prediction) -> (Schedule, f64) {
+        // Setup variables
         let mut schedule = Schedule::with_initial_config(instance.initial_positions().clone());
         let mut dc_schedule = Schedule::with_initial_config(instance.initial_positions().clone());
         let mut ftp_schedule = Schedule::with_initial_config(instance.initial_positions().clone());
@@ -213,22 +220,27 @@ impl PredAlgorithm for CombineDet {
         let mut bound = 1.0;
 
         let dc = DoubleCoverage;
-        
+
+        // For each request and prediction
         for (&req, &pred) in instance.requests().into_iter().zip(prediction.into_iter()) {
+            // Simulate follow-the-prediction
             let ftp = LambdaDC::new(0.0);
             let (next, cost) = ftp.next_move(ftp_schedule.last().unwrap(), req, pred);
             ftp_costs += cost;
             ftp_schedule.append_config(next);
-            
+
+            // Simulate Double-Coverage
             let (next, cost) = dc.next_move(dc_schedule.last().unwrap(), req, pred);
             dc_costs += cost;
             dc_schedule.append_config(next);
 
+            // Select the better algorithm
             while (current_dc && dc_costs > bound) || (!current_dc && ftp_costs > bound) {
                 current_dc = !current_dc;
                 bound *= 1.0 + self.gamma;
             }
 
+            // Append the latest configuration of the selected algorithm to the overall schedule
             if current_dc {
                 schedule.append_config(dc_schedule.last().unwrap().clone());
             } else {
@@ -236,10 +248,8 @@ impl PredAlgorithm for CombineDet {
             }
         }
 
-        schedule.normalize();
+        // Compute the cost for the final schedule
         let costs = schedule.cost();
-
-        //println!("{:?}", schedule);
         (schedule, costs)
     }
 
@@ -252,8 +262,6 @@ impl PredAlgorithm for CombineDet {
         (current.clone(), 0.0)
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -286,7 +294,7 @@ mod tests {
     fn test_lambda_dc_coverage() {
         let instance = Instance::from((vec![20, 80, 40, 64], vec![50, 50]));
         let pred = Prediction::from(vec![0, 1, 0, 1]);
-        let alg = LambdaDC::new( 0.5);
+        let alg = LambdaDC::new(0.5);
         assert_eq!(
             Schedule::from(vec![
                 vec![50, 50],
@@ -303,7 +311,7 @@ mod tests {
     fn test_lambda_dc_coverage_lambda_zero() {
         let instance = Instance::from((vec![20, 80, 40, 64], vec![50, 50]));
         let pred = Prediction::from(vec![0, 1, 0, 1]);
-        let alg = LambdaDC::new( 0.0);
+        let alg = LambdaDC::new(0.0);
         assert_eq!(
             Schedule::from(vec![
                 vec![50, 50],
@@ -315,6 +323,4 @@ mod tests {
             alg.run(&instance, &pred).0
         )
     }
-
-   
 }

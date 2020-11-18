@@ -3,26 +3,23 @@ use serverlib::prelude::*;
 use samplelib::*;
 
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use rand::distributions::{Distribution, Uniform};
+use rand::Rng;
 use rayon::prelude::*;
+use std::collections::HashMap;
 use std::error::Error;
 use structopt::StructOpt;
-use rand::distributions::{Uniform, Distribution};
-use rand::prelude::SliceRandom;
-use rand::Rng;
 
 #[derive(StructOpt, Debug)]
 pub struct PredictionConfig {
     #[structopt(short = "p", long = "preds", default_value = "12")]
     pub number_of_predictions: usize,
 
-    #[structopt(short = "b", long = "preds_bin_size", default_value = "0.25")]
-    pub step_size: f32,
+    #[structopt(short = "b", long = "preds_per_bin", default_value = "2")]
+    pub preds_per_bin: usize,
 
     #[structopt(short = "s", long = "preds_samples_per_round", default_value = "200")]
     pub number_of_samples_per_round: usize,
-
-    #[structopt(long = "max_preds_per_bin", default_value = "5")]
-    pub max_preds_per_round: usize,
 }
 
 trait PredictionAdder {
@@ -71,24 +68,21 @@ fn predict(lower: usize, upper: usize) -> usize {
     rng.gen_range(lower, upper + 1)
 }
 
-
-
 pub fn generate_predictions(
     instance: &Instance,
     solution: &Schedule,
     opt_cost: u32,
     config: &PredictionConfig,
 ) -> Result<Vec<Prediction>, PredictionError> {
-    let mut step_to_predictions: Vec<Vec<Prediction>> =
-        vec![vec![]; config.number_of_predictions as usize];
+    let mut predictions: Vec<Prediction> =
+        Vec::with_capacity(instance.length() * config.number_of_samples_per_round + 1);
 
     let perfect_prediction = solution.to_prediction(instance);
     let ref_perfect_prediction = &solution.to_prediction(instance);
-    step_to_predictions[0].push(perfect_prediction);
+    predictions.push(perfect_prediction);
 
     let mut rng = rand::thread_rng();
     let dist = Uniform::from(0..instance.length());
-
     for number_of_wrong_servers in 1..instance.length() {
         for _ in 1..config.number_of_samples_per_round {
             let mut correct_preds = vec![true; instance.length()];
@@ -113,57 +107,38 @@ pub fn generate_predictions(
                 }
             }
 
-            let pred = Prediction::from(pred_vec);
+            predictions.push(Prediction::from(pred_vec));
+        }
+    }
+
+    let preds_with_error: Vec<(Prediction, usize)> = predictions
+        .into_iter()
+        .map(|pred| {
             let pred_schedule = pred.to_schedule(instance);
-            // println!(
-            //     "Instance length {}, Solution length {}, Pred length {}",
-            //     instance.length(),
-            //     solution.size(),
-            //     pred.0.len()
-            // );
-            let eta = solution.diff(&pred_schedule);
-            let ratio = eta as f32 / opt_cost as f32;
-            let bin_index: usize = (ratio / config.step_size).ceil() as usize;
-
-            if bin_index < config.number_of_predictions
-                && step_to_predictions[bin_index].len() < config.max_preds_per_round
-            {
-                step_to_predictions[bin_index].push(pred);
-            }
-
-            if !step_to_predictions.iter().any(|preds| preds.is_empty()) {
-                break;
-            }
-        }
-
-        if !step_to_predictions.iter().any(|preds| preds.is_empty()) {
-            break;
-        }
-    }
-
-    let missing_bins: Vec<usize> = step_to_predictions
-        .iter()
-        .enumerate()
-        .filter(|(_, preds)| preds.is_empty())
-        .map(|(i, _)| i)
+            let eta = solution.diff(&pred_schedule).floor() as usize;
+            (pred, eta)
+        })
         .collect();
-    if !missing_bins.is_empty() {
-        let msgs: Vec<String> = missing_bins
-            .into_iter()
-            .map(|i| {
-                format!(
-                    "{} - {}",
-                    i as f32 * config.step_size,
-                    (i + 1) as f32 * config.step_size
-                )
-            })
-            .collect();
-
-        return Err(PredictionError::new(format!("{} missing!", msgs.join(","))));
-    } else {
-        Ok(step_to_predictions
-            .into_iter()
-            .map(|preds| preds.choose(&mut rng).unwrap().clone())
-            .collect())
+    let max_error = preds_with_error
+        .iter()
+        .max_by_key(|(_, error)| error)
+        .unwrap()
+        .1;
+    let bin_size = max_error as f64 / config.number_of_predictions as f64;
+    let mut bins: HashMap<usize, Vec<Prediction>> = HashMap::new();
+    for (pred, error) in preds_with_error {
+        let bin = (error as f64 / bin_size).ceil() as usize;
+        if bin < config.number_of_predictions {
+            let preds_in_bin = bins.entry(bin).or_default();
+            preds_in_bin.push(pred);
+        }
     }
+
+    for bin in bins.values_mut() {
+        bin.truncate(config.number_of_predictions);
+    }
+
+    let final_predictions = bins.into_iter().map(|(_, bin)| bin).flatten().collect();
+
+    Ok(final_predictions)
 }

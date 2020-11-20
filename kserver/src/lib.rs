@@ -4,7 +4,7 @@ use samplelib::*;
 use crate::algorithms::*;
 
 
-pub fn simulate_kserver(sample: &Sample, lambda: f32) -> Vec<SimResult> {
+pub fn simulate_kserver(sample: &Sample, gamma: f32, lambda: f32) -> Vec<SimResult> {
 
     let (_, dc_cost) = deterministic_alg(DoubleCoverage, &sample.instance);
     let results = sample

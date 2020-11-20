@@ -1,10 +1,10 @@
-use kserver::simulate_kserver;
-use ktaxi::simulate_ktaxi;
-use samplelib::*;
 use console::style;
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use itertools_num::linspace;
+use kserver::simulate_kserver;
+use ktaxi::simulate_ktaxi;
 use rayon::prelude::*;
+use samplelib::*;
 use std::error::Error;
 use std::fmt;
 use structopt::StructOpt;
@@ -13,6 +13,9 @@ use structopt::StructOpt;
 pub struct SimConfig {
     #[structopt(long = "lambdas", default_value = "5")]
     pub number_of_lambdas: usize,
+
+    #[structopt(short = "s", long = "gamma", default_value = "1.0")]
+    pub gamma: f32,
 }
 
 #[derive(StructOpt, Debug, Copy, Clone)]
@@ -51,24 +54,14 @@ impl Error for SimulatorError {
     }
 }
 
-
-
 trait Simulate {
-    fn simulate(
-        &self,
-        simulator: Simulators,
-        lambda: f32,
-    ) -> Vec<SimResult>;
+    fn simulate(&self, simulator: Simulators, gamma: f32, lambda: f32) -> Vec<SimResult>;
 }
 
 impl Simulate for Sample {
-    fn simulate(
-        &self,
-        simulator: Simulators,
-        lambda: f32,
-    ) -> Vec<SimResult> {
+    fn simulate(&self, simulator: Simulators, gamma: f32, lambda: f32) -> Vec<SimResult> {
         match simulator {
-            Simulators::KServer(_) => simulate_kserver(self, lambda),
+            Simulators::KServer(_) => simulate_kserver(self, gamma, lambda),
             Simulators::KTaxi(_) => simulate_ktaxi(self, lambda),
         }
     }
@@ -93,18 +86,17 @@ pub fn run(samples: Vec<Sample>, simulator: Simulators) -> Vec<SimResult> {
     results
 }
 
-fn simulate_sample(
-    sample: Sample,
-    lambdas: &Vec<f32>,
-    simulator: Simulators,
-) -> Vec<SimResult> {
+fn simulate_sample(sample: Sample, lambdas: &Vec<f32>, simulator: Simulators) -> Vec<SimResult> {
+    let gamma = match simulator {
+        Simulators::KTaxi(config) => config.gamma,
+        Simulators::KServer(config) => config.gamma,
+    };
     let results = lambdas
         .iter()
-        .map(|lambda| sample.simulate(simulator, *lambda))
+        .map(|lambda| sample.simulate(simulator, gamma, *lambda))
         .flatten()
         .collect::<Vec<SimResult>>();
 
-    
     return results;
 }
 

@@ -4,18 +4,14 @@
 
 #### bk k=2
 
-```
-cargo run --release -- -l 1000 -p 100 -b 4.0 -k 2 -o test.csv load_instances bk -d data kserver --lambdas 6
-```
-
-#### Sampled k=2
-
-```
-cargo run --release -- -l 300 -p 22 -b 0.25 -k 2 -o sample.csv load_instances bk -d data kserver --lambdas 6
+```bash
+cargo run --release -- -l 600 -p 30 -b 2 -k 2 -o bk_k2_l300_p30_b2.csv load_instances bk -d data kserver --lambdas 6
+cargo run --release -- -l 300 -p 15 -b 2 -k 2 -o bk_k2_l300_p15_b2.csv load_instances bk -d data kserver --lambdas 6
 ```
 
-#### Sampled k=10
+#### bk k=50
 
-```
-cargo run --release -- -l 300 -p 27 -b 3.0 -k 10 -o sample.csv sample 1000 kserver --lambdas 6
+```bash
+cargo run --release -- -l 300 -p 30 -b 120.0 -k 50 -o bk_k50_l300_p30_b120.csv load_instances bk -d data kserver --lambdas 6
+cargo run --release -- -l 600 -p 30 -b 240.0 -k 50 -o bk_k50_l600_p30_b240.csv load_instances bk -d data kserver --lambdas 6
 ```

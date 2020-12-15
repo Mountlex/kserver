@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<result>
+<query id="166472">coester* buchbinder*</query>
+<status code="200">OK</status>
+<time unit="msecs">1.15</time>
+<completions total="1" computed="1" sent="1">
+<c sc="1" dc="1" oc="1" id="24921842">buchbinder</c>
+</completions>
+<hits total="1" computed="1" sent="1" first="0">
+<hit score="2" id="312507">
+<info><authors><author pid="35/4292">Sébastien Bubeck</author><author pid="48/4123">Niv Buchbinder</author><author pid="195/5890">Christian Coester</author><author pid="207/8338">Mark Sellke</author></authors><title>Metrical Service Systems with Transformations.</title><venue>CoRR</venue><volume>abs/2009.08266</volume><year>2020</year><type>Informal Publications</type><key>journals/corr/abs-2009-08266</key><ee>https://arxiv.org/abs/2009.08266</ee><url>https://dblp.org/rec/journals/corr/abs-2009-08266</url></info>
+<url>URL#312507</url>
+</hit>
+</hits>
+</result>

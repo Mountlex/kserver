@@ -2,18 +2,42 @@
 
 [![Build Status](https://travis-ci.org/Mountlex/kserver.svg?branch=master)](https://travis-ci.org/Mountlex/kserver)
 
-#### bk k=2
+## BrightKite
+
+To download and preprocess the dataset, use the script `download_data.sh`.
+
+## Simulation
+
+The following commands were used to generate the results in the paper.
+
+k = 2:
 
 ```bash
-cargo run --release -- -l 50 -p 15 -b 1.5 -k 2 -o bk_k2_l50_p15_b15.csv load_instances bk -d data kserver --lambdas 6
-cargo run --release -- -l 300 -p 15 -b 2 -k 2 -o bk_k2_l300_p15_b2.csv load_instances bk -d data kserver --lambdas 6
-cargo run --release -- -l 600 -p 30 -b 2 -k 2 -o bk_k2_l300_p30_b2.csv load_instances bk -d data kserver --lambdas 6
+cargo run --release -- -l 1000 -p 20 -b 10 -k 2 -s500 -m5 -o bk_k2_l1000_p20_b10_lmb11.csv load_instances bk -d data kserver --lambdas 11
 ```
 
-#### bk k=50
+k = 5:
 
 ```bash
-cargo run --release -- -l 50 -p 20 -b 18 -k 50 -o bk_k50_l50_p20_b18.csv load_instances bk -d data kserver --lambdas 6
-cargo run --release -- -l 300 -p 30 -b 120.0 -k 50 -o bk_k50_l300_p30_b120.csv load_instances bk -d data kserver --lambdas 6
-cargo run --release -- -l 600 -p 30 -b 240.0 -k 50 -o bk_k50_l600_p30_b240.csv load_instances bk -d data kserver --lambdas 6
+cargo run --release -- -l 1000 -p 20 -b 32 -k 5 -s500 -m5 -o bk_k10_l1000_p20_b32_lmb11.csv load_instances bk -d data kserver --lambdas 11
+```
+
+k = 10:
+
+```bash
+cargo run --release -- -l 1000 -p 20 -b 75 -k 10 -s500 -m5 -o bk_k10_l1000_p20_b75_lmb11.csv load_instances bk -d data kserver --lambdas 11
+```
+
+k = 100:
+
+```bash
+cargo run --release -- -l 1000 -p 20 -b 700 -k 100 -s500 -m5 -o bk_k100_l1000_p20_b700_lmb11.csv load_instances bk -d data kserver --lambdas 11
+```
+
+## Results
+
+The `csv`-files which where used to generate the figures in the paper are located at `paper_results`. You can plot them using the `plot` script, e.g.
+
+```bash
+./plot paper_results/bk_k2_l1000_p20_b10_lmb11.csv -b10 -l 0.0 0.1 0.5 1.0
 ```

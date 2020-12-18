@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import argparse
 import sys
@@ -19,7 +19,7 @@ def create_arg_parser():
         description='Plot results from kserver simulation')
     parser.add_argument('sampleFile')
     parser.add_argument('-b', '--bin_size', default=0.25)
-    parser.add_argument('-l', '--lambdas', default=6, type=int)
+    parser.add_argument('-l', '--lambdas', nargs="+", default=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
     parser.add_argument('-k', '--number_of_servers', default=2)
     parser.add_argument('--max', action='store_true')
 
@@ -31,7 +31,7 @@ def get_data(filename):
     #data = data.round(3)
     data['EtaOverOpt'] = data['Eta'] / data['OptCost']
     data['CRalg'] = data['LDC'] / data['OptCost']
-    data['FtP & DC'] = data['RobustFtp'] / data['OptCost']
+    data['FtP&DC'] = data['RobustFtp'] / data['OptCost']
     data['CRdc'] = data['DC'] / data['OptCost']
     return data
 
@@ -94,27 +94,25 @@ def plot_lambda(df, eta_res, args, det_alg, pred_alg):
 
 
 def plot_eta(df, eta_res, args, pred_alg):
-    lambdas = list(np.linspace(0, 1, num=args.lambdas))
-    lambdas = [round(l, 3) for l in lambdas]
-    df = df[df['Lmbda'].isin(lambdas)]
+    df = df[df['Lmbda'].isin(args.lambdas)]
     df['Bin'] = np.ceil(df['EtaOverOpt'] / eta_res) * eta_res
     max_bin = df['Bin'].max()
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
-    dfcombine = df.loc[:, ['FtP & DC', 'Bin']]
+    dfcombine = df.loc[:, ['FtP&DC', 'Bin']]
     dfdc = df.loc[:, ['CRdc', 'Bin']]
 
     if args.max:
         grouped_data = dfAlg.groupby(['Bin', 'Lmbda']).max().unstack('Lmbda')
         ax = dfcombine.groupby(['Bin']).max().plot(
-            label='Combine_det', linewidth=2, legend=True)
+            label='Combine_det', style='s-', markersize=4, linewidth=1.2, legend=True)
     else:
         grouped_data = dfAlg.groupby(['Bin', 'Lmbda']).mean().unstack('Lmbda')
         ax = dfcombine.groupby(['Bin']).mean().plot(
-            label='Combine_det', linewidth=2, legend=True)
+            label='Combine_det', style='s-', markersize=4, linewidth=1.2, legend=True)
 
     for label, l in list(grouped_data):
         grouped_data[(label, l)].plot(
-            style='--', linewidth=2, label=f"{pred_alg} (λ = {l:1.2f})", legend=True)
+            style='o--', markersize=4, linewidth=1.2, label=f"{pred_alg} (λ = {l:1.2f})", legend=True)
 
     plt.plot((0, max_bin), (1, 1), 'black')
     plt.xlabel('Eta / Opt')
@@ -131,8 +129,8 @@ def plot_eta(df, eta_res, args, pred_alg):
         #    f"{args.number_of_servers} servers")
 
     fig = plt.gcf()
-    fig.set_dpi(400)
-    fig.set_size_inches(2,1.5, forward=True)
+    fig.set_dpi(500)
+    fig.set_size_inches(2,1.25)
     # fig.subplots_adjust(right=0.7)
     #fig.savefig("result.png", dpi=400)
 

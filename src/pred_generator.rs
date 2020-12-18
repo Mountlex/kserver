@@ -21,7 +21,7 @@ pub struct PredictionConfig {
     #[structopt(short = "s", long = "preds_samples_per_round", default_value = "200")]
     pub number_of_samples_per_round: usize,
 
-    #[structopt(short = "m", long = "preds_per_bin", default_value = "3")]
+    #[structopt(short = "m", long = "preds_per_bin", default_value = "5")]
     pub preds_per_bin: usize,
 }
 

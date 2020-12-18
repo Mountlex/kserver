@@ -29,6 +29,10 @@ pub fn run(instances: Vec<Instance>, config: &SampleConfig) -> Result<Vec<Sample
             "{} samples have been rejected because no valid predictions have been found!",
             style(number_of_rejected_samples).bold().red()
         );
+        println!(
+            "{} instances remain!",
+            style(samples_with_preds.len()).bold().green()
+        );
     }
     println!("{}", style("Finished!").bold().green());
 

@@ -15,7 +15,7 @@ pub struct SimConfig {
     pub number_of_lambdas: usize,
 
     #[structopt(short = "s", long = "gamma", default_value = "1.0")]
-    pub gamma: f32,
+    pub gamma: f64,
 }
 
 #[derive(StructOpt, Debug, Copy, Clone)]
@@ -55,11 +55,11 @@ impl Error for SimulatorError {
 }
 
 trait Simulate {
-    fn simulate(&self, simulator: Simulators, gamma: f32, lambda: f32) -> Vec<SimResult>;
+    fn simulate(&self, simulator: Simulators, gamma: f64, lambda: f32) -> Vec<SimResult>;
 }
 
 impl Simulate for Sample {
-    fn simulate(&self, simulator: Simulators, gamma: f32, lambda: f32) -> Vec<SimResult> {
+    fn simulate(&self, simulator: Simulators, gamma: f64, lambda: f32) -> Vec<SimResult> {
         match simulator {
             Simulators::KServer(_) => simulate_kserver(self, gamma, lambda),
             Simulators::KTaxi(_) => simulate_ktaxi(self, lambda),

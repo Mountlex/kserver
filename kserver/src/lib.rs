@@ -4,7 +4,7 @@ use samplelib::*;
 use crate::algorithms::*;
 
 
-pub fn simulate_kserver(sample: &Sample, gamma: f32, lambda: f32) -> Vec<SimResult> {
+pub fn simulate_kserver(sample: &Sample, gamma: f64, lambda: f32) -> Vec<SimResult> {
 
     let (_, dc_cost) = deterministic_alg(DoubleCoverage, &sample.instance);
     let results = sample
@@ -12,7 +12,7 @@ pub fn simulate_kserver(sample: &Sample, gamma: f32, lambda: f32) -> Vec<SimResu
         .iter()
         .map(|pred| {
             let (_, alg_cost) = learning_augmented_alg(LambdaDC::new(lambda), &sample.instance, pred);
-            let (_, combine_cost) = learning_augmented_alg(CombineDet::new(1.0), &sample.instance, pred);
+            let (_, combine_cost) = learning_augmented_alg(CombineDet::new(gamma), &sample.instance, pred);
             let eta = pred.eta(&sample.solution, &sample.instance);
             let k = sample.instance.k() as f64;
             if alg_cost as f64 > (1.0 + (k - 1.0) * lambda as f64) * (sample.opt_cost as f64 + 2.0 * eta as f64) {

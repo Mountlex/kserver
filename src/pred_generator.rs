@@ -10,6 +10,18 @@ use rayon::prelude::*;
 use std::error::Error;
 use structopt::StructOpt;
 
+macro_rules! min {
+    ($x: expr) => ($x);
+    ($x: expr, $($z: expr),+) => {{
+        let y = min!($($z),*);
+        if $x < y {
+            $x
+        } else {
+            y
+        }
+    }}
+}
+
 #[derive(StructOpt, Debug)]
 pub struct PredictionConfig {
     #[structopt(short = "p", long = "preds", default_value = "12")]
@@ -77,12 +89,12 @@ pub fn generate_predictions(
     opt_cost: u32,
     config: &PredictionConfig,
 ) -> Result<Vec<Prediction>, PredictionError> {
-    let mut step_to_predictions: Vec<Vec<Prediction>> =
+    let mut step_to_predictions: Vec<Vec<(Prediction, f32)>> =
         vec![vec![]; config.number_of_predictions as usize];
 
     let perfect_prediction = solution.to_prediction(instance);
     let ref_perfect_prediction = &solution.to_prediction(instance);
-    step_to_predictions[0].push(perfect_prediction);
+    step_to_predictions[0].push((perfect_prediction, 0.0));
 
     let mut rng = rand::thread_rng();
     let dist = Uniform::from(0..instance.length());
@@ -124,7 +136,7 @@ pub fn generate_predictions(
             let bin_index: usize = (ratio / config.step_size).ceil() as usize;
 
             if bin_index < config.number_of_predictions {
-                step_to_predictions[bin_index].push(pred);
+                step_to_predictions[bin_index].push((pred, ratio as f32));
             }
 
             if !step_to_predictions
@@ -165,11 +177,16 @@ pub fn generate_predictions(
     } else {
         Ok(step_to_predictions
             .into_iter()
-            .map(|preds| {
-                preds
-                    .choose_multiple(&mut rng, config.preds_per_bin)
-                    .cloned()
-                    .collect::<Vec<Prediction>>()
+            .map(|mut preds| {
+                preds.sort_by(|(_, err1), (_, err2)| err1.partial_cmp(err2).unwrap());
+                let largest = preds.last().unwrap().0.clone();
+                preds.swap_remove(preds.len() - 1);
+                let mut others = preds
+                    .choose_multiple(&mut rng, config.preds_per_bin - 1)
+                    .map(|(pred, _)| pred.clone())
+                    .collect::<Vec<Prediction>>();
+                others.push(largest);
+                others
             })
             .flatten()
             .collect())

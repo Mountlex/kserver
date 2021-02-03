@@ -10,18 +10,6 @@ use rayon::prelude::*;
 use std::error::Error;
 use structopt::StructOpt;
 
-macro_rules! min {
-    ($x: expr) => ($x);
-    ($x: expr, $($z: expr),+) => {{
-        let y = min!($($z),*);
-        if $x < y {
-            $x
-        } else {
-            y
-        }
-    }}
-}
-
 #[derive(StructOpt, Debug)]
 pub struct PredictionConfig {
     #[structopt(short = "p", long = "preds", default_value = "12")]

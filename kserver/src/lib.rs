@@ -6,7 +6,7 @@ use crate::algorithms::*;
 
 pub fn simulate_kserver(sample: &Sample, gamma: f64, lambda: f32) -> Vec<SimResult> {
 
-    let (_, dc_cost) = deterministic_alg(DoubleCoverage, &sample.instance);
+    let dc_cost =  deterministic_alg(DoubleCoverage, &sample.instance).0.to_lazy(&sample.instance).cost();
     let results = sample
         .predictions
         .iter()

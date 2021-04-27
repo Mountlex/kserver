@@ -68,7 +68,7 @@ fn predict(lower: usize, upper: usize) -> usize {
         return lower;
     }
     let mut rng = rand::thread_rng();
-    rng.gen_range(lower, upper + 1)
+    rng.gen_range(lower..upper + 1)
 }
 
 pub fn generate_predictions(

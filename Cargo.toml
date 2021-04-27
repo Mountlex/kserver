@@ -21,9 +21,9 @@ members = [
 
 [dependencies]
 mcmf = "2.0.0"
-structopt = "0.2.10"
-rand = "0.7.3"
-console = "0.9.2"
+structopt = "0.3.21"
+rand = "0.8.3"
+console = "0.14.1"
 rayon = "1.1"
 indicatif = {version = "*", features = ["with_rayon"]}
 itertools-num = "0.1.3"

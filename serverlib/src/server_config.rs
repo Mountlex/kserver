@@ -101,8 +101,6 @@ impl ServerConfiguration {
     }
 }
 
-
-
 impl From<Vec<f32>> for ServerConfiguration {
     fn from(vec: Vec<f32>) -> ServerConfiguration {
         ServerConfiguration::new(vec)
@@ -148,6 +146,8 @@ impl std::ops::IndexMut<usize> for ServerConfiguration {
 
 #[cfg(test)]
 mod tests {
+    use crate::prelude::CostMetric;
+
     use super::*;
     #[test]
     fn server_config_diff_works() {

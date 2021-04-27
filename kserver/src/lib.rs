@@ -11,8 +11,12 @@ pub fn simulate_kserver(sample: &Sample, gamma: f64, lambda: f32) -> Vec<SimResu
         .predictions
         .iter()
         .map(|pred| {
-            let (_, alg_cost) = learning_augmented_alg(LambdaDC::new(lambda), &sample.instance, pred);
-            let (_, combine_cost) = learning_augmented_alg(CombineDet::new(gamma), &sample.instance, pred);
+            let (alg_schedule, _) = learning_augmented_alg(LambdaDC::new(lambda), &sample.instance, pred);
+            let (combine_schedule, _) = learning_augmented_alg(CombineDet::new(gamma), &sample.instance, pred);
+
+            let alg_cost = alg_schedule.to_lazy(&sample.instance).cost();
+            let combine_cost = combine_schedule.to_lazy(&sample.instance).cost();
+
             let eta = pred.eta(&sample.solution, &sample.instance);
             let k = sample.instance.k() as f64;
             if alg_cost as f64 > (1.0 + (k - 1.0) * lambda as f64) * (sample.opt_cost as f64 + 2.0 * eta as f64) {

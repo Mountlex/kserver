@@ -10,6 +10,15 @@ edition = "2018"
 name = "serversim"
 path = "src/main.rs"
 
+
+[workspace]
+members = [
+    "serverlib",
+    "samplelib",
+    "kserver",
+    "ktaxi",
+]
+
 [dependencies]
 mcmf = "2.0.0"
 structopt = "0.2.10"

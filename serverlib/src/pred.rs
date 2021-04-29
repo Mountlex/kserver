@@ -89,11 +89,10 @@ impl Prediction {
 
     pub fn eta(&self, solution: &Schedule, instance: &Instance) -> f64 {
         let pred_schedule = self.to_schedule(instance);
-        return solution.diff(&pred_schedule);
+        return pred_schedule.cost() - solution.cost();
     }
 
     pub fn predicted_server(&self, request_index: usize) -> usize {
         return self[request_index];
     }
 }
-

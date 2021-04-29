@@ -119,7 +119,7 @@ pub fn generate_predictions(
             //     solution.size(),
             //     pred.0.len()
             // );
-            let eta = solution.diff(&pred_schedule);
+            let eta = pred_schedule.cost() - solution.cost();
             let ratio = eta as f32 / opt_cost as f32;
             let bin_index: usize = (ratio / config.step_size).ceil() as usize;
 

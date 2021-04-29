@@ -4,18 +4,26 @@ use samplelib::*;
 use crate::algorithms::*;
 
 
-pub fn simulate_kserver(sample: &Sample, gamma: f64, lambda: f32) -> Vec<SimResult> {
+pub fn simulate_kserver(sample: &Sample, gamma: f64, lambda: f32, lazy: bool) -> Vec<SimResult> {
 
-    let dc_cost =  deterministic_alg(DoubleCoverage, &sample.instance).0.to_lazy(&sample.instance).cost();
+
+    let (dc_schedule, mut dc_cost) =  deterministic_alg(DoubleCoverage, &sample.instance);
+    if lazy {
+        dc_cost = dc_schedule.to_lazy(&sample.instance).cost();
+    }
     let results = sample
         .predictions
         .iter()
         .map(|pred| {
-            let (alg_schedule, _) = learning_augmented_alg(LambdaDC::new(lambda), &sample.instance, pred);
-            let (combine_schedule, _) = learning_augmented_alg(CombineDet::new(gamma), &sample.instance, pred);
+            let (alg_schedule, mut alg_cost) = learning_augmented_alg(LambdaDC::new(lambda), &sample.instance, pred);
+            if lazy {
+                alg_cost = alg_schedule.to_lazy(&sample.instance).cost();
+            }
+            let (combine_schedule, mut combine_cost) = learning_augmented_alg(CombineDet::new(gamma), &sample.instance, pred);
+            if lazy {
+                combine_cost = combine_schedule.to_lazy(&sample.instance).cost();
 
-            let alg_cost = alg_schedule.to_lazy(&sample.instance).cost();
-            let combine_cost = combine_schedule.to_lazy(&sample.instance).cost();
+            }
 
             let eta = pred.eta(&sample.solution, &sample.instance);
             let k = sample.instance.k() as f64;

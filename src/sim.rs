@@ -16,6 +16,9 @@ pub struct SimConfig {
 
     #[structopt(short = "s", long = "gamma", default_value = "1.0")]
     pub gamma: f64,
+
+    #[structopt(short, long)]
+    pub lazy: bool,
 }
 
 #[derive(StructOpt, Debug, Copy, Clone)]
@@ -55,13 +58,25 @@ impl Error for SimulatorError {
 }
 
 trait Simulate {
-    fn simulate(&self, simulator: Simulators, gamma: f64, lambda: f32) -> Vec<SimResult>;
+    fn simulate(
+        &self,
+        simulator: Simulators,
+        gamma: f64,
+        lambda: f32,
+        lazy: bool,
+    ) -> Vec<SimResult>;
 }
 
 impl Simulate for Sample {
-    fn simulate(&self, simulator: Simulators, gamma: f64, lambda: f32) -> Vec<SimResult> {
+    fn simulate(
+        &self,
+        simulator: Simulators,
+        gamma: f64,
+        lambda: f32,
+        lazy: bool,
+    ) -> Vec<SimResult> {
         match simulator {
-            Simulators::KServer(_) => simulate_kserver(self, gamma, lambda),
+            Simulators::KServer(_) => simulate_kserver(self, gamma, lambda, lazy),
             Simulators::KTaxi(_) => simulate_ktaxi(self, lambda),
         }
     }
@@ -91,9 +106,13 @@ fn simulate_sample(sample: Sample, lambdas: &Vec<f32>, simulator: Simulators) ->
         Simulators::KTaxi(config) => config.gamma,
         Simulators::KServer(config) => config.gamma,
     };
+    let lazy = match simulator {
+        Simulators::KTaxi(config) => config.lazy,
+        Simulators::KServer(config) => config.lazy,
+    };
     let results = lambdas
         .iter()
-        .map(|lambda| sample.simulate(simulator, gamma, *lambda))
+        .map(|lambda| sample.simulate(simulator, gamma, *lambda, lazy))
         .flatten()
         .collect::<Vec<SimResult>>();
 

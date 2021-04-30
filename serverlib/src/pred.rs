@@ -1,4 +1,3 @@
-use crate::cost::CostMetric;
 use crate::instance::Instance;
 use crate::schedule::Schedule;
 use std::error::Error;

@@ -15,31 +15,33 @@ The following commands were used to generate the results in the paper.
 k = 2:
 
 ```bash
-cargo run --release -- -l 1000 -p 10 -b 28 -k 2 -s500 -m5 -o bk_k2.csv load_instances bk -d data kserver --lambdas 11
-```
-
-k = 5:
-
-```bash
-cargo run --release -- -l 1000 -p 10 -b 75 -k 5 -s500 -m5 -o bk_k10.csv load_instances bk -d data kserver --lambdas 11
+cargo run --release -- -l 1000 -p 10 -b 1 -k 2 -s100 -m5 -o bk_k2_.csv load_instances bk -d data kserver --lambdas 11
+cargo run --release -- -l 1000 -p 10 -b 1 -k 2 -s100 -m5 -o bk_k2_lazy.csv load_instances bk -d data kserver --lambdas 11 --lazy
 ```
 
 k = 10:
 
 ```bash
-cargo run --release -- -l 1000 -p 10 -b 170 -k 10 -s500 -m5 -o bk_k10.csv load_instances bk -d data kserver --lambdas 11
+cargo run --release -- -l 1000 -p 10 -b 2 -k 10 -s100 -m5 -o bk_k10_.csv load_instances bk -d data kserver --lambdas 11
+cargo run --release -- -l 1000 -p 10 -b 2 -k 10 -s100 -m5 -o bk_k10_lazy.csv load_instances bk -d data kserver --lambdas 11 --lazy
 ```
 
-k = 100:
+k = 50:
 
 ```bash
-cargo run --release -- -l 1000 -p 10 -b 1700 -k 100 -s500 -m5 -o bk_k100.csv load_instances bk -d data kserver --lambdas 11
+cargo run --release -- -l 1000 -p 10 -b 3 -k 50 -s100 -m5 -o bk_k50_.csv load_instances bk -d data kserver --lambdas 11
+cargo run --release -- -l 1000 -p 10 -b 3 -k 50 -s100 -m5 -o bk_k50_lazy.csv load_instances bk -d data kserver --lambdas 11 --lazy
 ```
 
 ## Results
 
-The `csv`-files which where used to generate the figures in the paper are located at `paper_results`. You can plot them using the `plot` script, e.g.
+The `csv`-files which where used to generate the figures in the paper are located at `paper_results`. You can plot them using the `plot` script:
 
 ```bash
-./plot paper_results/bk_k2_l1000_p10_b28.csv -b28 -l 0.0 0.1 0.5 1.0
+./plot paper_results/bk_k2.csv -b 1 -l 0.0 0.1 0.5
+./plot paper_results/bk_k2_lazy.csv -b 1 -l 0.0 0.1 0.5
+./plot paper_results/bk_k10.csv -b 2 -l 0.0 0.1 0.5
+./plot paper_results/bk_k10_lazy.csv -b 2 -l 0.0 0.1 0.5
+./plot paper_results/bk_k50.csv -b 3 -l 0.0 0.1 0.5
+./plot paper_results/bk_k50_lazy.csv -b 3 -l 0.0 0.1 0.5
 ```

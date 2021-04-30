@@ -122,7 +122,7 @@ def plot_eta(df, eta_res, args, pred_alg):
     plt.plot((0, max_bin), (1, 1), 'black')
     plt.xlabel('Eta / Opt')
     plt.ylabel('Empirical competitive ratio')
-    plt.legend(loc='upper left', ncol=1)
+    plt.legend(loc='upper left', ncol=2)
     plt.tight_layout()
     #plt.axis([0, max_bin, 0.99, 1.1])
 

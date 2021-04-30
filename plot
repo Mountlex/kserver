@@ -32,7 +32,7 @@ def get_data(filename):
     data['EtaOverOpt'] = data['Eta'] / data['OptCost']
     data['CRalg'] = data['LDC'] / data['OptCost']
     data['FtP&DC'] = data['RobustFtp'] / data['OptCost']
-    data['CRdc'] = data['DC'] / data['OptCost']
+    data['DC'] = data['DC'] / data['OptCost']
     return data
 
 
@@ -99,25 +99,30 @@ def plot_eta(df, eta_res, args, pred_alg):
     max_bin = df['Bin'].max()
     dfAlg = df.loc[:, ['Lmbda', 'CRalg', 'Bin']]
     dfcombine = df.loc[:, ['FtP&DC', 'Bin']]
-    dfdc = df.loc[:, ['CRdc', 'Bin']]
+    dfdc = df.loc[:, ['DC', 'Bin']]
 
+    ax = None
     if args.max:
         grouped_data = dfAlg.groupby(['Bin', 'Lmbda']).max().unstack('Lmbda')
-        ax = dfcombine.groupby(['Bin']).max().plot(
+        ax = dfcombine.groupby(['Bin']).max().plot(ax=ax,
             label='Combine_det', style='s-', markersize=4, linewidth=1.2, legend=True)
     else:
         grouped_data = dfAlg.groupby(['Bin', 'Lmbda']).mean().unstack('Lmbda')
-        ax = dfcombine.groupby(['Bin']).mean().plot(
+        ax = dfcombine.groupby(['Bin']).mean().plot(ax=ax,
             label='Combine_det', style='s-', markersize=4, linewidth=1.2, legend=True)
+        ax = dfdc.groupby(['Bin']).mean().plot(ax=ax,
+            label='DC', style='-', markersize=4, linewidth=1.2, legend=True)
 
     for label, l in list(grouped_data):
-        grouped_data[(label, l)].plot(
+        grouped_data[(label, l)].plot(ax=ax,
             style='o--', markersize=4, linewidth=1.2, label=f"{pred_alg} (λ = {l:1.2f})", legend=True)
+
+
 
     plt.plot((0, max_bin), (1, 1), 'black')
     plt.xlabel('Eta / Opt')
     plt.ylabel('Empirical competitive ratio')
-    plt.legend(loc='upper left')
+    plt.legend(loc='upper left', ncol=1)
     plt.tight_layout()
     #plt.axis([0, max_bin, 0.99, 1.1])
 
